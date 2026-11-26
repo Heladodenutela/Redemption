@@ -349,12 +349,13 @@ El botón está abajo a la izquierda. Una burbuja roja avisa que tienes algo sin
 | Pedidazo | Pedir cosas a la casa: comida, regalos y decoraciones para tu cuarto. Llegan al otro día desde las 7:00. |
 | Diario | Lo que pasó cada día, escrito solo. |
 | Relaciones | El mapa de tu círculo y qué tan fuerte es cada amistad. |
-| Logros | Los 32 logros y cuáles tienes. |
+| Logros | Los 34 logros y cuáles tienes. |
 | Notas | Lo pendiente: los parciales, las deudas y las pistas para los exámenes. |
 | Mapa | La ciudad y dónde estás. Tu mamá te pide compartir la ubicación. |
 | Playlist | Tres listas: para estudiar (Notas +1), para entrenar (Energía +4) y para calmarte (Energía +2, Social +1). Al tocar una, se corta la música que suena y empieza esa lista, que dura 3 horas del juego. La música se puede cambiar cuando quieras, pero el efecto solo se gana una vez cada 3 horas. El botón de abajo quita la lista y vuelve la música del lugar. Normalmente, cada zona tiene su propio tema (paraderos, calles, la U, la Plaza, el Parque, Deportes y Fuera de la U); dentro de la casa la música cambia según la hora. |
 | Batería | Se gasta con el celular abierto y se carga en tu casa y mientras duermes. Si llega a 0 %, el celular se apaga. |
 | Wordle, Flappy y Pong | Juegos del celular (sección 12). Divertidos, pero cuentan como tiempo de redes. |
+| ModerIA | Entrenas una IA para moderar mensajes (sección 12). Cada nivel que ganes entrena el filtro de tu celular: menos notificaciones al estudiar y al intentar dormir. |
 
 > **\[Espacio para foto 16\]** Un chat de WhatsApp con la barra «Responder a…» abierta.
 
@@ -497,6 +498,52 @@ Varios trabajos y favores usan la misma mecánica con otro dibujo. Si aprendes u
 
 Las clases tienen sus propios minijuegos (sección 10) y los deportes los suyos (sección 11).
 
+### Los juegos con pantalla propia
+
+Cuatro juegos ocupan toda la pantalla. Mientras juegas, el reloj y el resto del juego se detienen; al salir pasa el tiempo que duró la partida y recibes lo que ganaste.
+
+| Juego | Dónde está | Qué te da |
+| --- | --- | --- |
+| Ajedrez | Parque, en las mesas de ajedrez (**E** frente a una mesa) | Ganar: Notas +2 y Social +1. Tablas: Notas +1 y Social +1. Perder: Notas +1 |
+| Moderador (tower defense) | PixelZone, en las máquinas: opción **4**, gratis | Cada nivel ganado por primera vez: Seg +3 y Social +1 |
+| ModerIA | Celular, app **ModerIA** | Cada nivel ganado por primera vez: Notas +2 y el filtro de notificaciones |
+| Parqués | Casa, mesa del comedor, fuera de las comidas (de 9:00 a. m. a 11:00 p. m.) | Ganar: Social +2 y Energía +2. Perder: Social +1 |
+
+**Ajedrez.** Juegas con las blancas contra el señor de las mesas.
+
+- Antes de empezar escoges contra qué modelo juegas: el **1 (El clásico)** remata más; el **2 (El preciso)** evalúa mejor pero se conforma con tablas.
+- Click en tu pieza y luego en la casilla, o arrástrala. Los puntos marcan a dónde puede ir; el círculo, una pieza que se puede comer. Al coronar, el peón se vuelve dama.
+- Él responde solo. Si nadie gana en 60 jugadas cada uno, son tablas. Rendirse cuenta como perder.
+- Ganarle da el logro **Garry Kasparov**.
+
+**Moderador.** Spam, bots y haters bajan por el camino hacia tu feed. Si llegan 20, pierdes. Son 5 niveles y cada nivel ganado abre el siguiente.
+
+- Click en un círculo para construir una torre; click en una torre para mejorarla o venderla (devuelve el 70 %). Al pasar al nivel 5 escoges una de dos ramas.
+- Los enemigos: Spam, Bot (rápido), Hater (más vida), Verificado falso (tiene armadura), Virus (al morir se parte en 3 bots) y la Cadena viral, el jefe del nivel 5.
+- **ESPACIO** pausa, **N** trae la siguiente ola cuando ya salieron todos los enemigos y el botón **x2** acelera.
+
+| Torre | Qué hace | Rama A | Rama B |
+| --- | --- | --- | --- |
+| Reportar (60) | Flecha a un enemigo, rápida | Ráfaga: varias flechas a la vez | Certero: ignora armadura y hace tiros críticos |
+| Baneo (90) | Rayo que salta a 3 enemigos | Tormenta: salta a más y no pierde daño | Suspensión: aturde |
+| Bomba de reportes (120) | Explota en un área, lenta | Racimo: suelta minibombas | Fuego: deja el suelo ardiendo |
+| Firewall (100) | Muro de fuego en el camino que detiene y amontona a los enemigos | Muralla: aguanta el doble y los empuja hacia atrás | Infierno: quema fuerte alrededor |
+
+**ModerIA.** Le enseñas a una IA a moderar mensajes: tú dices qué es cada uno y ella aprende de eso. Si le enseñas mal, aprende mal.
+
+1. **¿Bueno o malo?** Etiquetas 16 mensajes y la IA aprende de cada uno. Luego la entrenas (escoges la tasa de aprendizaje y le das 20 vueltas) y la pruebas con 16 mensajes que nunca vio. Tiene que acertar el 80 %.
+2. **¿Qué tipo de mensaje es?** Lo mismo con cuatro tipos (bueno, burla, amenaza y estafa) y 20 mensajes. Meta: 80 %.
+3. **¿A quién se lo mando?** Ajustas los pesos y el sesgo de cuatro compuertas (Acoso, Psicóloga, Coordinación y Bloquear) hasta que sus tablas queden en verde. **Probar el sistema** manda 20 mensajes y todos tienen que llegar a su lugar.
+
+Cada nivel ganado hace que las notificaciones lleguen 15 % más espaciadas cuando estudias con el celular al lado y cuando no puedes dormir (hasta 45 %). Ganar los tres da el logro **Entrenador de IAs**.
+
+**Parqués.** Juegas con las fichas amarillas contra Lili (agresiva: come siempre que puede), Papá (cuidadoso: busca los seguros) y la abuela Nena (corredora: mueve la más adelantada).
+
+- Das la vuelta a la cruz y entras por el pasillo de tu color hasta la meta del centro. Gana el primero que meta las 4 fichas.
+- Tira los dados, escoge un dado y luego la ficha que brilla. Al pasar el mouse sobre una ficha se marca dónde caería. Si solo hay una jugada posible, se hace sola.
+- Con pares salen todas tus fichas de la cárcel y vuelves a tirar (hasta 3 veces). Sin fichas afuera tienes 3 intentos para sacar pares.
+- Si caes sobre otra ficha fuera de un seguro (las salidas y las estrellas), la mandas a la cárcel. Para entrar a la meta necesitas el número exacto.
+
 ## 13. Los eventos de los personajes
 
 Los eventos son las historias de cada personaje. Cada uno pasa en un lugar, unos días y unas horas. Cuando un evento está activo, la persona aparece en ese lugar con un **!** encima, y el cuadro AHORA te avisa; algunos te invitan antes por WhatsApp. Háblale con **R** para empezar la escena. Si no llegas a tiempo, el evento se pierde y la persona lo recuerda.
@@ -584,7 +631,7 @@ Se revisan en este orden y sale el primero que se cumpla:
 | Solo en la foto | Nivel social Perdedor y ningún amigo de verdad |
 | Diez días después | Ninguno de los anteriores |
 
-### Los 32 logros
+### Los 34 logros
 
 Son de tu cuenta: una vez ganados, salen ganados en las tres partidas. Cuando ganas uno sale un cartel dorado.
 
@@ -622,6 +669,8 @@ Son de tu cuenta: una vez ganados, salen ganados en las tres partidas. Cuando ga
 | Honesto | Di la verdad cuando costaba. |
 | Semestre aprobado | Pasa todas las materias. |
 | Diez días | Termina la historia. |
+| Garry Kasparov | Gánale a la máquina en el ajedrez del parque, como Kasparov a Deep Blue en 1996. |
+| Entrenador de IAs | Gana los 3 niveles de ModerIA. |
 
 ## 15. Guardar y cargar
 
@@ -650,10 +699,12 @@ No borres ni edites estos archivos a mano mientras el juego está abierto. Si un
 
 **ESC o P** abre la pausa. El reloj se queda quieto y los minijuegos no pierden tiempo.
 
+La pausa y el celular nunca están abiertos al tiempo. Con el celular abierto, **ESC** lo cierra y **P** no hace nada; la pausa se abre con el celular cerrado.
+
 | Pestaña | Qué tiene |
 | --- | --- |
 | Resumen | Tu puntaje y de dónde sale cada parte |
-| Logros | Los 32 logros y cuáles tienes |
+| Logros | Los 34 logros y cuáles tienes |
 | Notas | Cómo vas en cada materia |
 | Ajustes | Dificultad, música (prender y volumen), sonido de los clicks, **tamaño de la ventana** y **Limitar a 30 FPS** |
 | Controles | Todas las teclas |

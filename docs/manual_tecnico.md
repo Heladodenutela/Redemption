@@ -1186,3 +1186,77 @@ Cuando un cambio no debe cambiar nada (quitar los `continue`, reordenar revision
 ### La versión ordenada
 
 `Redemption_ordenado.pde` se arma desde el archivo final cambiando de lugar funciones y variables, sin tocar su texto. Se comprueba que las líneas de código de las dos versiones, ordenadas, coinciden una por una (30.860 líneas), y la versión ordenada también compila y pasa las pruebas.
+
+## 18. Los juegos con pantalla propia: ajedrez, Moderador, ModerIA y parqués
+
+Estos cuatro juegos no usan el motor de minijuegos: cada uno tiene su propio caso en el `switch (screen)` de `dibujarJuego()`, igual que el rugby. Mientras están abiertos no se llama `cicloTiempo()`, así que el reloj, los NPC y el celular se quedan quietos.
+
+| `screen` | Juego | Se abre desde | Prefijo de sus nombres |
+| --- | --- | --- | --- |
+| 4 | Ajedrez | Las mesas del Parque (`accionDeObjeto("Jugar ajedrez")`) | `aj` / `AJ_` |
+| 5 | Moderador | PixelZone, opción 4 de las máquinas (`jugarArcade(3)`) | `td` / `TD_` |
+| 6 | ModerIA | Quinto ícono de la primera fila del celular | `ia` / `IA_` |
+| 7 | Parqués | La mesa del comedor fuera de las comidas (`mesaFamilia()`) | `pq` / `PQ_` |
+
+Los cuatro siguen el mismo patrón:
+
+1. `iniciarX()` guarda `xDesde = millis()`, pone `cel = 0` y cambia `screen`.
+2. En el `draw`, el caso de su `screen` pide el cartel morado (`pedirAvisoMJ`) la primera vez, y luego llama `actualizarX()` y `dibujarX()`.
+3. `mousePressed` llama `clickX()`; el ajedrez también usa `mouseReleased` para soltar la pieza arrastrada.
+4. `salirX()` corre el reloj con `desplazarTiempos(millis() - xDesde)`, suma el tiempo de la partida con `avanzarTiempo` y da los stats con `aplicarEfectos`. Cada `xDesde` está en `desplazarTiempos()`, así el tiempo que el cartel morado estuvo abierto no se cuenta dos veces.
+
+Las tablas grandes (pesos, niveles, mensajes) se llenan en funciones `datos_…()` y no en la declaración. Java guarda los valores iniciales de las variables globales dentro del constructor, que tiene el mismo límite de 64 KB que cualquier método; con estas tablas declaradas directamente, el juego ya no compilaba.
+
+### Ajedrez: reglas completas y una red de perceptrones
+
+El tablero es `ajTablero[8][8]` (positivo = blancas, negativo = negras) y `ajInfo[7]` guarda el turno, los cuatro enroques y la casilla de captura al paso. Las jugadas se generan en dos pasos: `ajGenerarPseudo` saca las jugadas según cómo se mueve cada pieza y `ajGenerarLegales` se queda con las que no dejan al propio rey en jaque (las prueba en una copia del tablero). Las jugadas se guardan en vectores paralelos (`ajLegF1`, `ajLegC1`, `ajLegF2`, `ajLegC2`, `ajLegPromo`). Se verificó contando todas las posiciones posibles desde el inicio: 20, 400, 8.902 y 197.281 a 1, 2, 3 y 4 jugadas, que son los números oficiales.
+
+El bot no busca en profundidad. Para cada jugada legal:
+
+1. Hace la jugada en una copia (`ajBotB`).
+2. Calcula 9 características de la posición (`ajCalcularCaracteristicas`): material, movilidad, centro, avance de peones, protección del rey, desarrollo, amenazas, espacio y peones débiles. Cada una es "blancas menos negras" dividida por un número para que quede cerca de −1 a 1.
+3. Pasa esas 9 entradas por una red 9 → 16 → 8 → 1 con activación tanh (`ajCapa`, `ajEvaluar`). La salida va de −1 (ganan negras) a 1 (ganan blancas).
+
+Juega la jugada con mejor salida para su color. Los pesos se entrenaron aparte en Python (carpeta `entrenamiento_ajedrez` del repositorio) con posiciones ya evaluadas por un motor. Hay varios modelos (`AJ_W1S[modelo]`, etc.) y el jugador escoge contra cuál juega; cada modelo se llena en su propia función `datos_AJ_MODELO_n()`. Si nadie gana en 120 medias jugadas, o solo quedan los reyes, son tablas.
+
+### Moderador: niveles en una matriz
+
+Cada nivel es una fila de `TD_NIVELES`:
+
+| Posición | Qué guarda |
+| --- | --- |
+| \[0\] | 1 si el nivel está desbloqueado |
+| \[1\] | Número del fondo (`mapa_N+1.png`) |
+| \[2\] | n = cuántos lugares para torres hay |
+| siguientes 2n | x, y de cada lugar |
+| el resto | Las olas: `-1`, los segundos que dura la ola y después pares (cantidad, enemigo) hasta el siguiente `-1` |
+
+El camino va aparte, en `TD_CAMINOS`: el origen y cada punto de giro. Al empezar el nivel se calcula la distancia acumulada hasta cada punto (`tdCamLargo`), y cada enemigo guarda solo cuánto ha avanzado (`E_AVANCE`); `tdPosicion(avance)` convierte ese número en x, y. Los enemigos vivos están en `tdEne[160][13]` (x, y, vida, velocidad, tipo, avance, estado…). Las torres apuntan al enemigo más adelantado dentro de su alcance.
+
+El Firewall no dispara: pone un muro en el punto del camino más cercano (`tdAvanceMasCercano`), y un enemigo no puede pasar de `tdMuroAvance - 18`, así que se amontonan detrás del muro. Al llegar al nivel 5 cada torre escoge una rama, que le cambia la mecánica (por ejemplo, el rayo aturde o la bomba deja fuego). Los niveles ganados se guardan como banderas (`TD_GANO_n`), así quedan en la partida guardada sin agregar variables.
+
+### ModerIA: una neurona que aprende en vivo
+
+Los 50 mensajes están en `IA_MSJ`: quién lo manda, el texto, 10 rasgos en 0 o 1 (grosería, risa, apodo, daño, gritos, enlace, pide plata o datos, desconocido, amable, se repite) y el tipo de verdad. La neurona no lee el texto: solo ve los 10 rasgos.
+
+Cada neurona calcula `sigmoide(w · x + b)` y aprende con la regla delta cada vez que el jugador etiqueta un mensaje:
+
+```latex
+w_i \leftarrow w_i + \eta \, (y - \hat{y}) \, x_i
+```
+
+donde η es la tasa de aprendizaje que escoge el jugador (0.05, 0.2 o 0.8), y la etiqueta y es la del jugador, no la verdad. Por eso, si el jugador etiqueta mal, la red aprende mal. El nivel 1 usa una neurona (bueno o malo); el nivel 2 usa cuatro (una por tipo) y gana la más segura. La prueba usa mensajes que la red nunca vio y se califica con el tipo de verdad.
+
+El nivel 3 son perceptrones clásicos con activación escalón (sale 1 si `w1·x1 + w2·x2 + b > 0`) que el jugador configura a mano para armar compuertas Y, O y Y-NO. La compuerta Coordinación recibe la salida de la compuerta Acoso, así que se ve cómo se encadenan.
+
+La ventaja en el juego está en `filtroModeria()`: devuelve 1 + 0.15 por cada nivel ganado y multiplica el tiempo entre notificaciones en el minijuego de estudiar con el celular al lado y en el del insomnio.
+
+### Parqués: el tablero en una tabla y bots de reglas fijas
+
+El camino de la cruz son 28 casillas guardadas en orden en `PQ_CAMINO` (columna, fila). Cada ficha guarda cuánto ha avanzado desde su salida (`pqPos[jugador][ficha]`: −1 cárcel, 0 a 27 camino, 28 y 29 pasillo, 30 meta), y la casilla real es `(jugador × 7 + avance) mod 28`. Los seguros son las casillas 0, 2 y 5 de cada tramo de 7 (`pqSeguro`).
+
+Los bots no usan IA: `pqPuntajeJugada` le pone puntos a cada jugada posible según su personalidad y juegan la de más puntos. Lili suma mucho por comer, Papá suma por quedar en un seguro y resta si queda a 12 casillas o menos de un rival, y la abuela suma por llevar más lejos su ficha. Se probaron 2.000 partidas solo entre bots y todas terminaron.
+
+### Rendimiento
+
+Al medir qué gastaba más tiempo en cada cuadro, salía primero `filaHoja`: cada cuadro, por cada objeto dibujado, volvía a partir el texto de `VISOR_DATOS` ("0;0;4;AFK|1;0;4;…") para saber qué fila de la hoja usar. Ahora `prepararFilasHojas()` lo parte una sola vez y guarda los números en `visFilas[hoja][fila]`; se comprobó que da exactamente lo mismo en las 719 combinaciones. Lo mismo con la narración: el texto sin corchetes se calcula una vez por texto y no en cada cuadro.
