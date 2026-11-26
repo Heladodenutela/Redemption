@@ -109,6 +109,35 @@ float fpVelTubos = 6;
 float fpX = 640, fpLado = 30, fpHueco = 200, fpAnchoTubo = 70, fpSeparacion = 300, fpY, fpV;
 float[][] fpTubos = new float[3][3];
 int fpEstado, fpPuntos;
+// Sprites de Wordle, Flappy y Pong (extras/interfaz/1_celular/juegos/). Si falta uno, se dibuja como antes.
+String[] CJ_ARCHIVO = {"wordle_casillas", "cartel_ganaste", "cartel_perdiste", "flappy_fondo", "flappy_tubo", "pong_fondo", "pong_barra", "pong_bola"};
+final int CJ_CASILLAS = 0, CJ_GANASTE = 1, CJ_PERDISTE = 2, CJ_FL_FONDO = 3, CJ_FL_TUBO = 4, CJ_PG_FONDO = 5, CJ_PG_BARRA = 6, CJ_PG_BOLA = 7;
+PImage[] cjImg = new PImage[CJ_ARCHIVO.length];
+boolean cjBuscados = false;
+
+// El sprite k de los juegos del celular (los carga la primera vez)
+PImage imgJuegoCel(int k) {
+  if (!cjBuscados) {
+    cjBuscados = true;
+    for (int i = 0; i < CJ_ARCHIVO.length; i++) cjImg[i] = cargarSiExiste("extras/interfaz/1_celular/juegos/" + CJ_ARCHIVO[i] + ".png");
+  }
+  return cjImg[k];
+}
+
+// Cartel de ganaste o perdiste encima del juego (460x260, centrado). Devuelve false si no hay sprite.
+boolean cartelJuegoCel(int k) {
+  PImage c = imgJuegoCel(k);
+  if (!hay(c)) return false;
+  noStroke();
+  fill(0, 0, 0, 120);
+  rect(celX1, celY1, celX2 - celX1, celY2 - celY1);
+  image(c, 570, 230, 460, 260);
+  return true;
+}
+
+// Sprite del pájaro: extras/interfaz/1_celular/flappy_pajaro.png (384x96: 4 cuadros de 96x96 aleteando)
+PImage fpPajaro = null;
+boolean fpPajaroBuscado = false;
 
 // Pong
 float pgVelBarra = 9;
@@ -1004,13 +1033,48 @@ void dibujarJuego() {
     dibujarFutbol();
     break;
 
+    case 4:
+    if (cargado == 0) {
+      cargado = 1;
+      pedirAvisoMJ("AJEDREZ");
+    }
+    if (avisoMJActivo()) { dibujarFondoAvisoMJ(); break; }
+    actualizarAjedrez();
+    dibujarAjedrez();
+    break;
+
     case 5:
+    if (cargado == 0) {
+      cargado = 1;
+      pedirAvisoMJ("MODERADOR");
+    }
+    if (avisoMJActivo()) { dibujarFondoAvisoMJ(); break; }
+    actualizarModerador();
+    dibujarModerador();
     break;
 
     case 6:
+    if (cargado == 0) {
+      cargado = 1;
+      pedirAvisoMJ("MODERIA");
+    }
+    if (avisoMJActivo()) { dibujarFondoAvisoMJ(); break; }
+    actualizarNeurona();
+    dibujarNeurona();
+    break;
+
+    case 7:
+    if (cargado == 0) {
+      cargado = 1;
+      pedirAvisoMJ("PARQUES");
+    }
+    if (avisoMJActivo()) { dibujarFondoAvisoMJ(); break; }
+    actualizarParques();
+    dibujarParques();
     break;
   }
-  if(cel>0)
+  // el celular nunca se dibuja encima de la pausa
+  if(cel>0 && !(screen == 1 && pausado))
   {
 
     if (ui_pantallaCelular != null) {
@@ -1029,13 +1093,28 @@ void dibujarJuego() {
 
   for (int i = 0; i < 6; i++) {
   for (int j = 0; j < 5; j++) {
+  if (hay(imgJuegoCel(CJ_CASILLAS))) {
+    // casillas: 0 normal, 1 amarilla (está en otro lugar), 2 verde (está bien)
+    int t = 0;
+    if (wrdlc[i][j] == 2) t = 1;
+    if (wrdlc[i][j] == 3) t = 2;
+    dibujarHoja(imgJuegoCel(CJ_CASILLAS), 90, 90, 0, t, 530+j*110, 90+i*110, 1);
+  } else {
   if(wrdlc[i][j] == 3){fill(100,256,100);}else if (wrdlc[i][j] ==2){fill(256,256,100);} else{fill(100,100,256);}
     rect(530+j*110,90+i*110,90,90);
+  }
     textSize(50);
     fill(0);
     text(wrdl[i][j], 565+j*110, 150+110*i);}
   }
-  if (w==1)
+  if (w==1 && cartelJuegoCel(CJ_GANASTE)) {
+    fill(40);
+    textAlign(CENTER, CENTER);
+    textSize(30);
+    text("En " + (l + 1) + " intentos", 800, 420);
+    textAlign(LEFT, BASELINE);
+  }
+  if (w==1 && !hay(imgJuegoCel(CJ_GANASTE)))
   {
     fill(180,180,256,100);
     rect(500,50,600,800);
@@ -1043,7 +1122,14 @@ void dibujarJuego() {
     fill(0);
     text("GANASTE !!!", 700, 400);
   }
-  if (w==-1)
+  if (w==-1 && cartelJuegoCel(CJ_PERDISTE)) {
+    fill(40);
+    textAlign(CENTER, CENTER);
+    textSize(30);
+    text("La palabra era: " + palabras[r].toUpperCase(), 800, 420);
+    textAlign(LEFT, BASELINE);
+  }
+  if (w==-1 && !hay(imgJuegoCel(CJ_PERDISTE)))
   {
     fill(180,180,256,100);
     rect(500,50,600,800);
@@ -1091,20 +1177,47 @@ void dibujarJuego() {
     }
   }
   noStroke();
-  fill(150, 210, 250);
-  rect(celX1, celY1, celX2 - celX1, celY2 - celY1);
+  if (hay(imgJuegoCel(CJ_FL_FONDO))) image(imgJuegoCel(CJ_FL_FONDO), celX1, celY1, celX2 - celX1, celY2 - celY1);
+  else {
+    fill(150, 210, 250);
+    rect(celX1, celY1, celX2 - celX1, celY2 - celY1);
+  }
   clip(celX1, celY1, celX2 - celX1, celY2 - celY1);
   fill(60, 170, 60);
+  PImage tubo = imgJuegoCel(CJ_FL_TUBO);
   for (int k = 0; k < 3; k++)
   {
     float arriba = fpTubos[k][1] - fpHueco/2;
     float abajo = fpTubos[k][1] + fpHueco/2;
-    rect(fpTubos[k][0], celY1, fpAnchoTubo, arriba - celY1);
-    rect(fpTubos[k][0], abajo, fpAnchoTubo, celY2 - abajo);
+    if (hay(tubo)) {
+      // el sprite es un tubo largo con la boca arriba: abajo se recorta; arriba se dibuja volteado
+      int hAbajo = int(celY2 - abajo), hArriba = int(arriba - celY1);
+      image(tubo, fpTubos[k][0], abajo, fpAnchoTubo, hAbajo, 0, 0, tubo.width, min(tubo.height, hAbajo));
+      pushMatrix();
+      translate(fpTubos[k][0], arriba);
+      scale(1, -1);
+      image(tubo, 0, 0, fpAnchoTubo, hArriba, 0, 0, tubo.width, min(tubo.height, hArriba));
+      popMatrix();
+    } else {
+      rect(fpTubos[k][0], celY1, fpAnchoTubo, arriba - celY1);
+      rect(fpTubos[k][0], abajo, fpAnchoTubo, celY2 - abajo);
+    }
   }
   noClip();
-  fill(250, 220, 40);
-  rect(fpX - fpLado/2, fpY - fpLado/2, fpLado, fpLado);
+  if (!fpPajaroBuscado) { fpPajaroBuscado = true; fpPajaro = cargarSiExiste("extras/interfaz/1_celular/flappy_pajaro.png"); }
+  if (hay(fpPajaro)) {
+    // aletea mientras juegas y se inclina según la velocidad (sube = mira arriba, cae = mira abajo)
+    int cuadroP = 0;
+    if (fpEstado == 1) cuadroP = (cuadros / 5) % 4;
+    pushMatrix();
+    translate(fpX, fpY);
+    rotate(constrain(fpV * 0.05, -0.5, 0.9));
+    dibujarHoja(fpPajaro, 96, 96, 0, cuadroP, -27, -27, 0.5625);
+    popMatrix();
+  } else {
+    fill(250, 220, 40);
+    rect(fpX - fpLado/2, fpY - fpLado/2, fpLado, fpLado);
+  }
   textAlign(CENTER, CENTER);
   fill(0);
   textSize(50);
@@ -1113,6 +1226,14 @@ void dibujarJuego() {
   if (fpEstado == 0) { text("Click para volar", 800, 300); }
   if (fpEstado == 2)
   {
+    if (cartelJuegoCel(CJ_PERDISTE)) {
+      // el cartel trae el título arriba; los puntos van en la mitad de abajo
+      fill(40);
+      textSize(30);
+      text("Puntos: " + fpPuntos, 800, 380);
+      textSize(22);
+      text("Click para jugar otra vez", 800, 440);
+    } else {
     fill(180, 180, 256, 200);
     rect(celX1, celY1, celX2 - celX1, celY2 - celY1);
     fill(0);
@@ -1121,6 +1242,7 @@ void dibujarJuego() {
     textSize(30);
     text("Puntos: " + fpPuntos, 800, 400);
     text("Click para jugar otra vez", 800, 460);
+    }
   }
   textAlign(LEFT, BASELINE);
   } else if(cel==4)
@@ -1148,11 +1270,16 @@ void dibujarJuego() {
     if (pgBola[0] < celX1) { pgEstado = 2; }
   }
   noStroke();
-  fill(20, 20, 40);
-  rect(celX1, celY1, celX2 - celX1, celY2 - celY1);
+  if (hay(imgJuegoCel(CJ_PG_FONDO))) image(imgJuegoCel(CJ_PG_FONDO), celX1, celY1, celX2 - celX1, celY2 - celY1);
+  else {
+    fill(20, 20, 40);
+    rect(celX1, celY1, celX2 - celX1, celY2 - celY1);
+  }
   fill(255);
-  rect(pgBarraX, pgBarraY, pgBarraAncho, pgBarraAlto);
-  rect(pgBola[0] - pgTam/2, pgBola[1] - pgTam/2, pgTam, pgTam);
+  if (hay(imgJuegoCel(CJ_PG_BARRA))) image(imgJuegoCel(CJ_PG_BARRA), pgBarraX, pgBarraY, pgBarraAncho, pgBarraAlto);
+  else rect(pgBarraX, pgBarraY, pgBarraAncho, pgBarraAlto);
+  if (hay(imgJuegoCel(CJ_PG_BOLA))) image(imgJuegoCel(CJ_PG_BOLA), pgBola[0] - pgTam/2, pgBola[1] - pgTam/2, pgTam, pgTam);
+  else rect(pgBola[0] - pgTam/2, pgBola[1] - pgTam/2, pgTam, pgTam);
   textAlign(CENTER, CENTER);
   textSize(50);
   text(pgPuntos, 800, 120);
@@ -1160,6 +1287,13 @@ void dibujarJuego() {
   if (pgEstado == 0) { text("Click para empezar\n(click = la barra cambia de direccion)", 800, 300); }
   if (pgEstado == 2)
   {
+    if (cartelJuegoCel(CJ_PERDISTE)) {
+      fill(40);
+      textSize(30);
+      text("Puntos: " + pgPuntos, 800, 380);
+      textSize(22);
+      text("Click para jugar otra vez", 800, 440);
+    } else {
     fill(180, 180, 256, 200);
     rect(celX1, celY1, celX2 - celX1, celY2 - celY1);
     fill(0);
@@ -1168,6 +1302,7 @@ void dibujarJuego() {
     textSize(30);
     text("Puntos: " + pgPuntos, 800, 400);
     text("Click para jugar otra vez", 800, 460);
+    }
   }
   textAlign(LEFT, BASELINE);
   }else if(cel==5)
@@ -1226,6 +1361,18 @@ void mousePressed() {
       clickFutbol();
     }
   break;
+  case 4:
+    clickAjedrez();
+  break;
+  case 5:
+    clickModerador();
+  break;
+  case 6:
+    clickNeurona();
+  break;
+  case 7:
+    clickParques();
+  break;
 }
 if(cel>0){ if (dist(mouseX, mouseY, 800, 800) <= 25) {
     cel=1;w=0;
@@ -1257,6 +1404,10 @@ if (w==0){
         cel = 4;
         pedirAvisoCelular("PONG");
         reiniciarPong();
+      } else if (mouseX >= 930 && mouseX <= 1010 && mouseY >= 80 && mouseY <= 160)
+      {
+        iniciarNeurona();
+
       } else if (clickIconosCelular2())
       {
       } else if (mouseX >= 830 && mouseX <= 910 && mouseY >= 80 && mouseY <= 160)
@@ -1326,12 +1477,15 @@ if (w==0){
 // Tecla presionada: ESC abre la pausa en vez de cerrar el juego; después reparte la tecla a lo que esté abierto (minijuego, celular, menú o mundo).
 void keyPressed() {
 
-  if (key == ESC) { key = 0; if (teclaMenuV23()) return; if (screen == 1 && !finJuego) alternarPausa(); else if (finJuego && finPagina >= 4) exit(); return; }
+  // ESC: si el celular está abierto, lo cierra (no se abre la pausa encima); si no, abre o cierra la pausa
+  if (key == ESC) { key = 0; if (teclaMenuV23()) return; if (screen == 1 && !pausado && cel > 0) { cel = 0; return; } if (screen == 1 && !finJuego) alternarPausa(); else if (finJuego && finPagina >= 4) exit(); return; }
   if (screen == 1 && pausado) { if (key == 'p' || key == 'P') alternarPausa(); return; }
   if (teclaAvisoMJ()) return;
+  if (screen == 5) { teclaModerador(); return; }
   if (screen == 1 && finJuego) { if (key == 'e' || key == 'E' || key == ' ' || key == ENTER || key == RETURN) avanzarFinJuego(); return; }
   if (screen == 1 && teclaV22()) return;
-  if (screen == 1 && (key == 'p' || key == 'P') && cel != 2) { alternarPausa(); return; }
+  // P solo pausa con el celular cerrado (así tampoco interrumpe cuando escribes en un chat)
+  if (screen == 1 && (key == 'p' || key == 'P') && cel == 0) { alternarPausa(); return; }
   if (screen == 1 && menuAbierto) { teclasMenu(); return; }
 
   if (cel == 0 && screen == 1 && !viajeActivo) {
@@ -1414,6 +1568,10 @@ void mouseReleased() {
   soltarInsomnio();
   soltarClickPicado();
   soltarMouseV20();
+  if (screen == 4) {
+    convertirMouse();
+    soltarAjedrez();
+  }
 }
 
 // Rueda del mouse: sube y baja las listas largas (inventario, Pedidazo, chats).
@@ -2636,12 +2794,10 @@ void nuevomensaje(String codigo) {
   char quien = letraEn(codigo, 0);
   int fila = int(codigo.substring(1));
   if ((quien != '0' && quien != '1') || fila < 0 || fila >= MSG_FILAS || msg[fila][0].equals("")) {
-    println("nuevomensaje: codigo no valido " + codigo);
     return;
   }
   int col = MSG_INI + msg[fila][1].length();
   if (col >= MSG_COLS || msg[fila][col].equals("")) {
-    println("nuevomensaje: " + msg[fila][0] + " no tiene mas mensajes escritos");
     return;
   }
   boolean abajo = (cel == 6 && chatAbierto == fila && msgBarra >= maxBarra(altoChat(fila)) - 1);
@@ -4049,7 +4205,6 @@ PImage hojaPorNombre(String nombre) {
   for (int k = 0; k < VISOR_DATOS.length; k++) {
     if (VISOR_DATOS[k][0].equals(nombre)) return visHojas[k];
   }
-  println("hojaPorNombre: no existe " + nombre);
   return null;
 }
 
@@ -4558,20 +4713,36 @@ int indiceHoja(String nombre) {
   for (int k = 0; k < VISOR_DATOS.length; k++) {
     if (VISOR_DATOS[k][0].equals(nombre)) return k;
   }
-  println("indiceHoja: no existe " + nombre);
   return -1;
 }
 
 int[] resFilaHoja;
 
+// Las filas de cada hoja ya convertidas a números: visFilas[hoja][fila del visor] = { fila en la hoja, columna inicial, cuadros }.
+// Se arma una sola vez (prepararFilasHojas) para no partir el texto de VISOR_DATOS en cada cuadro.
+int[][][] visFilas;
+
+// Parte una vez el texto de cada hoja ("0;0;4;AFK|1;0;4;AFK acción|...") y guarda los números en visFilas.
+void prepararFilasHojas() {
+  visFilas = new int[VISOR_DATOS.length][][];
+  for (int k = 0; k < VISOR_DATOS.length; k++) {
+    partirPorLetra(VISOR_DATOS[k][4], '|');
+    String[] filas = resPartirPorLetra;
+    visFilas[k] = new int[filas.length][3];
+    for (int i = 0; i < filas.length; i++) {
+      partirPorLetra(filas[i], ';');
+      visFilas[k][i][0] = int(resPartirPorLetra[0]);
+      visFilas[k][i][1] = int(resPartirPorLetra[1]);
+      visFilas[k][i][2] = int(resPartirPorLetra[2]);
+    }
+  }
+}
+
 // { fila en la hoja, columna inicial, cuadros } de la fila n del visor
-// Deja el resultado en resFilaHoja.
+// Deja el resultado en resFilaHoja (solo se lee: es la fila guardada en visFilas).
 void filaHoja(int idx, int n) {
-  partirPorLetra(VISOR_DATOS[idx][4], '|');
-  String[] filas = resPartirPorLetra;
-  partirPorLetra(filas[constrain(n, 0, filas.length - 1)], ';');
-  String[] f = resPartirPorLetra;
-  resFilaHoja = new int[] { int(f[0]), int(f[1]), int(f[2]) };
+  if (visFilas == null) prepararFilasHojas();
+  resFilaHoja = visFilas[idx][constrain(n, 0, visFilas[idx].length - 1)];
 }
 
 // Dibuja la hoja "idx" (fila n del visor) con su esquina de arriba a la izquierda en (x, y) del fondo
@@ -4744,6 +4915,7 @@ void dibujarIconosCelular() {
     text(nom[k], x + 40, y + 84);
     if (k == 3) burbujaRoja(x + 74, y + 6, totalNoLeidos());
   }
+  dibujarIconoNeurona();
   textAlign(LEFT, BASELINE);
 }
 
@@ -7049,7 +7221,7 @@ void dibujarInsomnio() {
   if (t < INSOMNIO_MS - 1500 && millis() >= notifSiguiente) {
     nuevaNotificacion();
     float f = t / (float) INSOMNIO_MS;
-    notifSiguiente = millis() + int(lerp(NOTIF_CADA_MS_INI, NOTIF_CADA_MS_FIN, f) / dif);
+    notifSiguiente = millis() + int(lerp(NOTIF_CADA_MS_INI, NOTIF_CADA_MS_FIN, f) / dif * filtroModeria());
   }
   float dx = 0;
   if (millis() < notifSacudida) dx = random(-8, 8);
@@ -8201,7 +8373,7 @@ int bandera(String n) {
 void sumarBandera(String n, int v) {
   int i = posBandera(n);
   if (i >= 0) { banderaValor[i] += v; return; }
-  if (banderasN >= MAX_BANDERAS) { println("Sin espacio para la bandera " + n); return; }
+  if (banderasN >= MAX_BANDERAS) return;
   banderaNombre[banderasN] = n;
   banderaValor[banderasN] = v;
   banderaIndice[-1 - i] = banderasN + 1;
@@ -8742,11 +8914,11 @@ void dibujarArcade() {
   int fichas = cantidadInventario("Ficha de PixelZone");
   text("Cada partida: una ficha (tienes " + fichas + ") o $" + FICHA_PIXEL + " · tienes $" + dinero, 460, 260);
   for (int k = 0; k < 3; k++) {
-    float y = 300 + k * 90;
-    boolean encima = mouseX > 460 && mouseX < 1140 && mouseY > y && mouseY < y + 76;
+    float y = 290 + k * 80;
+    boolean encima = mouseX > 460 && mouseX < 1140 && mouseY > y && mouseY < y + 72;
     noStroke();
     if (encima) fill(color(190, 160, 255)); else fill(color(225, 215, 250));
-    rect(460, y, 680, 76, 12);
+    rect(460, y, 680, 72, 12);
     fill(30);
     textSize(26);
     text((k + 1) + ".  " + ARCADE_JUEGOS[k], 485, y + 34);
@@ -8760,24 +8932,39 @@ void dibujarArcade() {
     } else {
       if (k == 1) rec = arcadeRecord[k] + " pisos"; else rec = arcadeRecord[k] + " ms";
     }
-    text("Récord: " + rec, 485, y + 62);
+    text("Récord: " + rec, 485, y + 60);
   }
+  // 4: el Moderador (tower defense con niveles; gratis)
+  boolean encima4 = mouseX > 460 && mouseX < 1140 && mouseY > 530 && mouseY < 602;
+  noStroke();
+  if (encima4) fill(color(160, 220, 190)); else fill(color(210, 240, 222));
+  rect(460, 530, 680, 72, 12);
+  fill(30);
+  textSize(26);
+  text("4.  Moderador · tower defense", 485, 562);
+  textSize(18);
+  fill(80);
+  int ganados = 0;
+  for (int i = 0; i < TD_N; i++) if (bandera("TD_GANO_" + i) > 0) ganados++;
+  text("Gratis · niveles ganados: " + ganados + " de " + TD_N, 485, 590);
   fill(110);
   textSize(18);
-  text("1-3 o click para jugar · Q para salir", 460, 625);
+  text("1-4 o click para jugar · Q para salir", 460, 632);
 }
 
 // Qué máquina está bajo el mouse.
 int arcadeEnMouse() {
   for (int k = 0; k < 3; k++) {
-    float y = 300 + k * 90;
-    if (mouseX > 460 && mouseX < 1140 && mouseY > y && mouseY < y + 76) return k;
+    float y = 290 + k * 80;
+    if (mouseX > 460 && mouseX < 1140 && mouseY > y && mouseY < y + 72) return k;
   }
+  if (mouseX > 460 && mouseX < 1140 && mouseY > 530 && mouseY < 602) return 3;
   return -1;
 }
 
 // Juega una máquina (gasta una ficha o paga).
 void jugarArcade(int k) {
+  if (k == 3) { iniciarModerador(); return; }
   if (k < 0 || k > 2) return;
   if (!quitarInventario("Ficha de PixelZone", 1)) {
     if (dinero < FICHA_PIXEL) { aviso("No tienes fichas ni $" + FICHA_PIXEL); return; }
@@ -9685,7 +9872,7 @@ void teclasActividad2() {
     if (usar || cerrar || key == 'r' || key == 'R') terminarActividad();
     break;
   case ACT_ARCADE:
-    if (key >= '1' && key <= '3') jugarArcade(key - '1');
+    if (key >= '1' && key <= '4') jugarArcade(key - '1');
     else if (cerrar || usar) terminarActividad();
     break;
   case ACT_ARC_ROYALE:
@@ -11154,6 +11341,10 @@ void mesaFamilia() {
   } else if (m >= 19 * 60 && m < 21 * 60 + 30 && bandera("CENA_" + dia) == 0) {
     sumarBandera("CENA_" + dia, 1);
     poner(fam, '0', c[2], "C:" + dia, null);
+  } else if (m >= 9 * 60 && m < 23 * 60) {
+    // fuera de las comidas, en la mesa se juega parqués con la familia
+    iniciarParques();
+    return;
   } else {
     aviso("La mesa está vacía. Desayuno de 6:00 a 8:30 a. m. · cena de 7:00 a 9:30 p. m.");
     return;
@@ -12561,6 +12752,4504 @@ void terminarPartidoRugby() {
   empezarActividad(ACT_DEPORTE_RES);
 }
 
+// ============================ AJEDREZ EN EL PARQUE (pantalla propia: screen 4) ============================
+// Se juega en las mesas del Parque (K8). Tú llevas las blancas y el señor de las mesas (el bot) las negras.
+// Igual que el rugby, tiene su propio espacio en el draw: mientras dura la partida el resto del juego
+// se detiene (el reloj, los NPC y el celular). Al salir se corre el reloj lo que duró y se suma el tiempo
+// de la partida.
+// El bot no espera a que se lo pidas: apenas mueves, piensa un momento y responde. No se le puede pasar
+// el turno: solo puedes mover las blancas y solo cuando te toca.
+// Cómo piensa: prueba cada jugada legal, calcula 9 características de la posición que queda y se las da
+// a una red de perceptrones (9 -> 16 -> 8 -> 1). Juega la que le da el mejor puntaje.
+// Sprites: minijuegos/ajedrez/piezas.png (480x160: 6 columnas de 80x80, fila 0 blancas y fila 1 negras,
+// en orden rey, dama, torre, alfil, caballo, peón). Si no está, se dibuja un círculo con la letra.
+
+final int AJ_TAM = 88;
+final float AJ_X = 448, AJ_Y = 98;
+final int AJ_PEON = 1, AJ_CABALLO = 2, AJ_ALFIL = 3, AJ_TORRE = 4, AJ_DAMA = 5, AJ_REY = 6;
+final int AJ_MAX_MOV = 320;
+final int AJ_MAX_JUGADAS = 120;
+final int AJ_ESPERA_BOT = 700;
+final int[] AJ_VALOR = {0, 1, 3, 3, 5, 9, 0};
+final int[] AJ_CANT_INICIAL = {0, 8, 2, 2, 2, 1, 1};
+final int[] AJ_COL_SPRITE = {0, 5, 4, 3, 2, 1, 0};
+
+final int[][] AJ_SALTOS_CABALLO = {{-2, -1}, {-2, 1}, {-1, -2}, {-1, 2}, {1, -2}, {1, 2}, {2, -1}, {2, 1}};
+final int[][] AJ_DIR_REY = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
+final int[][] AJ_DIR_TORRE = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+final int[][] AJ_DIR_ALFIL = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+
+final String[] AJ_LETRAS = {"", "P", "C", "A", "T", "D", "R"};
+final String[] AJ_COLUMNAS = {"a", "b", "c", "d", "e", "f", "g", "h"};
+final String[] AJ_PROMO_LETRA = {"", "", "=C", "=A", "=T", "=D", ""};
+
+// ajTablero[fila][columna]: fila 0 = 8.ª fila (negras arriba). Positivo = blancas, negativo = negras, 0 = vacía
+int[][] ajTablero = new int[8][8];
+
+// Datos de la posición (casillas de ajInfo)
+final int AJ_TURNO = 0;    // 1 blancas, -1 negras
+final int AJ_ENR_BC = 1;   // enroque corto de las blancas (1 = todavía se puede)
+final int AJ_ENR_BL = 2;   // enroque largo de las blancas
+final int AJ_ENR_NC = 3;   // enroque corto de las negras
+final int AJ_ENR_NL = 4;   // enroque largo de las negras
+final int AJ_EP_F = 5;     // fila de la casilla de captura al paso (-1 = no hay)
+final int AJ_EP_C = 6;     // columna de la casilla de captura al paso
+int[] ajInfo = new int[7];
+
+// Jugadas legales de la posición actual (vectores paralelos)
+int[] ajLegF1 = new int[AJ_MAX_MOV];
+int[] ajLegC1 = new int[AJ_MAX_MOV];
+int[] ajLegF2 = new int[AJ_MAX_MOV];
+int[] ajLegC2 = new int[AJ_MAX_MOV];
+int[] ajLegPromo = new int[AJ_MAX_MOV];
+float[] ajLegPuntaje = new float[AJ_MAX_MOV];
+int ajLegN = 0;
+
+// Jugadas según cómo se mueve cada pieza (todavía pueden dejar al rey en jaque)
+int[] ajPsF1 = new int[AJ_MAX_MOV];
+int[] ajPsC1 = new int[AJ_MAX_MOV];
+int[] ajPsF2 = new int[AJ_MAX_MOV];
+int[] ajPsC2 = new int[AJ_MAX_MOV];
+int[] ajPsPromo = new int[AJ_MAX_MOV];
+int ajPsN = 0;
+
+// Posiciones de prueba (para no dañar la de verdad)
+int[][] ajPruebaB = new int[8][8];
+int[] ajPruebaInfo = new int[7];
+int[][] ajBotB = new int[8][8];
+int[] ajBotInfo = new int[7];
+
+// Resultados de las funciones que no devuelven vectores
+int resAjReyF, resAjReyC;
+float[] resAjCaract = new float[9];
+float[] resAjCapa;
+
+// Estado de la partida
+int ajUltF1 = -1, ajUltC1, ajUltF2, ajUltC2;
+int ajSelF = -1, ajSelC = -1;
+boolean ajArrastrando = false;
+int ajEstado = 0;            // 0 jugando, 1 terminó, 2 escogiendo el modelo
+int ajResultado = 0;         // 1 ganaste, 0 tablas, -1 perdiste
+String ajMotivo = "";
+int ajJugadas = 0;           // medias jugadas hechas
+int ajBotDesde = 0;          // millis() en que el bot empezó a pensar (0 = no está pensando)
+int ajDesde = 0;             // millis() en que empezó la partida (lo corre desplazarTiempos)
+String ajUltimoBot = "";
+PImage ajPiezas = null;
+boolean ajPiezasBuscadas = false;
+
+
+// ---------------------------------------------------------------------
+//  Perceptrones (9 -> 16 -> 8 -> 1, tanh). W[perceptrón][entrada], B[perceptrón]
+// ---------------------------------------------------------------------
+// Los modelos del bot (sus pesos). Cada uno es una red entrenada aparte; el jugador escoge contra cuál juega.
+// AJ_W1S[modelo] es la matriz W1 de ese modelo (y así con las demás). Si un modelo no tiene pesos (null), sale apagado.
+final int AJ_MODELOS = 3;
+float[][][] AJ_W1S = new float[AJ_MODELOS][][], AJ_W2S = new float[AJ_MODELOS][][], AJ_W3S = new float[AJ_MODELOS][][];
+float[][] AJ_B1S = new float[AJ_MODELOS][], AJ_B2S = new float[AJ_MODELOS][], AJ_B3S = new float[AJ_MODELOS][];
+String[] AJ_MODELO_NOMBRE = {"Modelo 1 · El clásico", "Modelo 2 · El preciso", "Modelo 3 · El rematador"};
+String[] AJ_MODELO_TEXTO = {
+  "El primer entrenamiento. Cuando ve ventaja, remata.",
+  "Evalúa mejor las posiciones, pero se conforma con tablas.",
+  "Más capaz de encontrar la jugada ganadora (próximamente)."
+};
+int ajModelo = 1;
+
+// Llena los pesos de los modelos (cada uno en su propia función por el límite de 64 KB por método de Java).
+void datos_AJ_PESOS() {
+  datos_AJ_MODELO_1();
+  datos_AJ_MODELO_2();
+}
+
+// Modelo 1: el primer entrenamiento
+void datos_AJ_MODELO_1() {
+  AJ_W1S[0] = new float[][] {
+    {1.152470, -1.979466, 0.077170, 0.372986, 0.201546, -0.721307, 0.066455, -1.251045, 0.186973},
+    {0.202100, -0.790962, -0.459239, -0.471174, -1.177535, 1.578376, 0.690272, -1.036236, -0.533920},
+    {0.363904, 1.100176, -0.481537, -0.253574, 0.650706, -0.040515, 0.146648, -0.925512, 0.050941},
+    {0.744172, -0.311856, 0.393926, -0.736157, -0.296279, -0.329211, -0.015650, -0.852016, -0.452644},
+    {-1.374048, 0.069063, 0.263282, -2.143184, 0.056660, -0.820227, 0.119705, -1.081174, 0.417469},
+    {0.074446, 0.354003, 0.467038, 0.320354, 0.489520, 0.156003, 0.489790, -0.126295, 0.197391},
+    {1.100067, -0.260836, -0.019384, -0.374172, -0.114856, 0.124656, 0.179719, -0.350871, -0.114911},
+    {2.143337, -0.171408, -0.338434, 0.749883, 3.258027, -0.017339, -0.592711, 0.003897, -0.621933},
+    {0.237721, -0.307577, 0.424772, 0.320952, -0.260783, -0.831819, 0.805815, -0.575357, -0.249732},
+    {-0.095004, -0.581518, 0.131874, -0.405638, -0.088235, -0.577100, 0.180891, -0.406082, -0.172297},
+    {0.130518, -1.067077, -0.231850, -0.132866, -0.565989, -0.217008, 0.191127, 0.023106, 0.096741},
+    {-3.026952, 0.594337, 0.275687, 0.346659, -1.454816, -0.496428, -0.669399, -0.190800, -0.724234},
+    {-1.878702, -0.221500, -0.411770, 0.917482, -0.692059, -0.177968, -0.070866, 0.168665, -0.464928},
+    {-4.965567, -0.657838, -0.633321, -0.604483, -0.366926, 0.006815, 0.568486, -1.211922, 0.333352},
+    {-2.473963, 0.129903, 0.601686, 1.253990, 0.184631, 0.268587, 0.304787, -1.895072, -0.784426},
+    {-3.816266, -0.273056, -0.117449, -0.454678, 3.031975, -0.155106, -1.225873, 0.179818, 0.676403}
+  };
+  AJ_B1S[0] = new float[] {-0.693151, -0.370816, -0.775898, -0.140406, 1.104380, 0.830463, 0.193961, -0.622434, -0.858294, -0.018621, -0.166565, -0.039784, 0.879746, -0.719992, 1.187883, -0.609357};
+  AJ_W2S[0] = new float[][] {
+    {-0.596229, 0.721515, 0.489356, 0.079463, -0.514547, -0.827582, -0.082506, -0.248381, 0.639361, -0.096498, 0.322752, 0.626378, -0.034508, 2.146034, -0.350114, 0.716376},
+    {-0.100522, 1.145221, -0.526017, -0.257638, 1.373678, -0.336724, -0.378294, -0.929053, 0.650159, 0.306767, -0.558026, 2.221632, 0.847359, -0.353864, 1.551799, 2.717524},
+    {0.494612, 0.060872, 0.944190, 0.844000, -1.064781, -0.092299, 0.232937, 1.825469, 0.093467, -0.040600, -0.014233, -0.532981, -0.747959, 0.267764, -0.698584, 1.373001},
+    {0.647026, 0.504499, -0.406909, 0.787817, -0.031400, -0.976278, 0.379349, 1.540153, 0.294404, 0.344765, 0.709756, -0.010127, -0.308502, 0.382239, -0.802123, 1.921581},
+    {1.419423, -0.019972, -0.524898, 1.070345, 1.209482, 0.445463, 0.758951, 0.058427, -0.910388, 0.462989, 0.207020, -0.639483, -0.327974, -1.616809, 0.457545, -0.937146},
+    {-1.098778, -0.237588, -0.505136, -0.233321, 1.171454, 0.021520, -0.029585, -1.122382, 0.049488, 0.235008, 0.185743, 1.689976, 1.163738, 0.135909, 1.928074, 1.310536},
+    {1.094697, -0.641678, -0.628895, -0.300380, -0.081652, 0.405388, 0.132394, 0.189660, -0.902781, -0.392812, 0.393836, -0.396423, 0.201711, -2.300787, -0.266652, -0.540691},
+    {1.094615, 1.296516, -0.235082, 0.265398, 0.085587, 0.042884, -0.164351, 0.576771, 1.298338, 0.386607, 0.800053, -0.194847, -0.728658, -0.965716, -0.829664, 0.458788}
+  };
+  AJ_B2S[0] = new float[] {-1.083320, -0.232997, 0.327464, -0.201214, 0.692866, 0.578056, 0.764719, -0.661489};
+  AJ_W3S[0] = new float[][] {
+    {-0.669657, -0.781622, 0.145378, -0.339752, -2.335232, -0.432827, 1.061214, -2.002354}
+  };
+  AJ_B3S[0] = new float[] {0.139665};
+}
+
+// Modelo 2: el segundo entrenamiento (más preciso)
+void datos_AJ_MODELO_2() {
+  AJ_W1S[1] = new float[][] {
+    {-2.378063, -1.072169, -0.058256, 0.077856, 1.727204, -2.361823, 1.429284, -0.006293, 0.119457},
+    {-0.471914, 0.356053, 0.467401, 1.214276, 1.154294, 1.747199, -0.097716, -0.678508, 0.573449},
+    {-0.577060, -0.224164, -0.828736, -0.714261, 0.653737, -0.270505, -1.443792, 1.235584, -1.253397},
+    {-1.029721, 0.013633, -0.138159, -0.228859, 0.411920, -0.100784, -0.023509, 0.556049, 0.314769},
+    {1.206923, 0.333188, -1.179961, -2.638675, -1.057396, 0.008503, -0.308948, 2.698588, 1.188645},
+    {5.010654, -2.289978, 0.911831, -1.563882, 0.729064, -0.422022, -0.145526, -1.055681, -0.758290},
+    {-1.614972, -0.196887, -0.136968, -0.093800, -1.109954, -1.460386, -0.343968, -0.485518, -1.594908},
+    {-1.837717, 0.858782, -0.383100, 0.288670, 0.931834, 0.456663, 0.867330, -0.049085, -1.953487},
+    {-0.286822, 0.333420, -1.194776, -0.081074, -0.052223, -0.266379, 0.372338, -0.174036, 1.163886},
+    {2.595042, -0.692605, -1.076338, -0.358949, 0.843373, -1.116266, -0.010981, 1.678138, -0.337309},
+    {5.043323, 0.216368, -0.014026, 1.871854, 1.131850, -0.243608, 0.196082, -0.701065, -0.546618},
+    {2.942410, 1.429914, 0.322616, 1.953000, -2.516459, -0.854364, 1.066579, -0.099271, -1.507751},
+    {-0.101981, -2.009266, 0.564768, 0.104594, -1.233404, 0.311895, -0.802782, 0.233072, 0.104642},
+    {1.273467, 1.683567, 1.258500, -0.389379, 0.236265, 0.028583, 0.493692, -2.331799, -0.317295},
+    {-0.062587, -0.124027, 0.839138, 0.744314, -0.960952, -0.244397, -0.728832, 1.475479, -0.856548},
+    {-0.193994, 0.885534, 1.080327, 0.587378, 0.519142, -3.209645, -0.353909, 1.060174, 0.578276}
+  };
+  AJ_B1S[1] = new float[] {-0.568280, -1.525531, 0.972634, -1.212093, -0.725433, 0.739541, -0.427216, 1.165363, -0.876021, 0.057266, -0.661938, 0.036056, 1.862009, 1.080475, -0.283290, 0.827455};
+  AJ_W2S[1] = new float[][] {
+    {1.851214, -0.733279, -0.067765, -0.339220, -3.183882, -4.633208, 1.553101, -0.442611, -1.518665, 0.217403, -3.418733, -2.451612, 1.458406, 1.108256, 1.483499, -2.724804},
+    {0.247380, 0.850252, 2.127118, 0.197535, -0.654565, -1.033104, -0.205339, 1.633436, 0.975642, -0.413888, -3.228043, 0.273023, 0.087347, 0.542118, -0.735192, 1.120438},
+    {0.636305, -0.621484, -0.855450, 0.303843, 1.054824, 0.598540, 2.598403, 0.580111, 0.010152, -2.563311, -0.433790, -1.469646, -0.410195, -1.033657, 0.326994, -0.634797},
+    {-0.146769, -1.564144, 0.419346, -0.615773, 0.339659, 0.779724, -0.413192, 0.055496, 0.588687, -0.649366, 2.099850, 0.671818, 1.537529, 0.586169, -0.377635, 0.249700},
+    {0.204711, 0.178127, 0.589078, 0.834539, 0.895740, 1.238783, 0.693713, -1.238379, 0.118679, 0.402638, 0.912556, 0.673016, -0.161912, -0.147991, 0.209589, -0.528030},
+    {0.429818, -0.195705, 0.231171, 0.890317, 0.130279, 0.261986, 0.551618, 0.911005, 0.773875, -1.313648, -0.973145, -0.588077, -0.017825, -1.182886, -0.110967, 0.102140},
+    {-1.065613, 1.946177, 0.391548, -0.146251, 0.488754, 0.614698, -1.299993, 0.066771, 0.093460, 0.094678, 1.827210, 1.809825, -0.606421, -2.157821, -0.124770, 0.586959},
+    {-0.163391, 0.220222, 0.664220, -0.707383, -1.460761, 0.710609, 0.294536, 0.239329, -0.717685, 0.266786, -0.094243, 0.216634, 0.306703, 1.922239, 0.341006, 1.139693}
+  };
+  AJ_B2S[1] = new float[] {0.794015, 0.978388, -0.819459, 0.389582, -0.757031, -1.401317, -1.112410, 0.987568};
+  AJ_W3S[1] = new float[][] {
+    {-0.612304, 2.454750, -1.052485, -3.018432, -1.326177, -1.344086, 2.694142, 1.169973}
+  };
+  AJ_B3S[1] = new float[] {-0.781134};
+}
+
+// tanh(z) = (e^z - e^-z) / (e^z + e^-z)
+float ajTanh(float z) {
+  if (z > 20) return 1;
+  if (z < -20) return -1;
+  float a = exp(z);
+  float b = exp(-z);
+  return (a - b) / (a + b);
+}
+
+// Salida de una capa: tanh(w1*x1 + ... + wn*xn + b) de cada perceptrón. Queda en resAjCapa.
+void ajCapa(float[] entrada, float[][] W, float[] B) {
+  float[] salida = new float[B.length];
+  for (int j = 0; j < B.length; j++) {
+    float z = B[j];
+    for (int i = 0; i < entrada.length; i++) {
+      z = z + W[j][i] * entrada[i];
+    }
+    salida[j] = ajTanh(z);
+  }
+  resAjCapa = salida;
+}
+
+// Puntaje de una posición: -1 ganan negras, 0 tablas, +1 ganan blancas.
+float ajEvaluar(float[] x) {
+  ajCapa(x, AJ_W1S[ajModelo], AJ_B1S[ajModelo]);
+  float[] h1 = resAjCapa;
+  ajCapa(h1, AJ_W2S[ajModelo], AJ_B2S[ajModelo]);
+  float[] h2 = resAjCapa;
+  ajCapa(h2, AJ_W3S[ajModelo], AJ_B3S[ajModelo]);
+  return resAjCapa[0];
+}
+
+
+// ---------------------------------------------------------------------
+//  Entrar, salir y el ciclo de la partida
+// ---------------------------------------------------------------------
+
+// Lo llama la mesa de ajedrez del Parque: cambia a la pantalla del ajedrez.
+void iniciarAjedrez() {
+  if (AJ_W1S[0] == null) datos_AJ_PESOS();
+  if (!ajPiezasBuscadas) {
+    ajPiezasBuscadas = true;
+    ajPiezas = cargarSiExiste("minijuegos/ajedrez/piezas.png");
+  }
+  if (!ajBotonesBuscados) {
+    ajBotonesBuscados = true;
+    ajBotRendirse = cargarSiExiste("minijuegos/ajedrez/botones/rendirse.png");
+    ajBotVolver = cargarSiExiste("minijuegos/ajedrez/botones/volver_parque.png");
+  }
+  teclaIzq = false;
+  teclaDer = false;
+  cel = 0;
+  ajDesde = millis();
+  ajReiniciar();
+  ajEstado = 2;                // primero se escoge el modelo
+  screen = 4;
+  cargado = 0;
+}
+
+// Deja el tablero en la posición inicial.
+void ajReiniciar() {
+  ajPosicionInicial(ajTablero, ajInfo);
+  ajUltF1 = -1;
+  ajDeseleccionar();
+  ajGenerarLegales(ajTablero, ajInfo);
+  ajEstado = 0;
+  ajResultado = 0;
+  ajMotivo = "";
+  ajJugadas = 0;
+  ajBotDesde = 0;
+  ajUltimoBot = "";
+}
+
+// Cada cuadro: si el bot está pensando y ya pasó la espera, juega.
+void actualizarAjedrez() {
+  if (ajEstado != 0 || ajBotDesde == 0) return;
+  if (millis() - ajBotDesde >= AJ_ESPERA_BOT) {
+    ajBotDesde = 0;
+    ajJugarBot();
+  }
+}
+
+// Termina la partida con un resultado (1 ganaste, 0 tablas, -1 perdiste).
+void ajTerminar(int res, String motivo) {
+  ajEstado = 1;
+  ajResultado = res;
+  ajMotivo = motivo;
+  ajBotDesde = 0;
+  ajDeseleccionar();
+}
+
+// Vuelve al parque: corre el reloj lo que duró la pantalla, suma el tiempo de la partida y da el efecto.
+void salirAjedrez() {
+  int quieto = millis() - ajDesde;
+  ajDesde = 0;
+  desplazarTiempos(quieto);
+  avanzarTiempo(min(60, 10 + ajJugadas / 2));
+  String ef;
+  String msg;
+  if (ajResultado == 1) {
+    ef = "Notas +2 · Social +1";
+    msg = "Le ganaste al señor de las mesas. Te pide la revancha para mañana.";
+    sumarBandera("AJEDREZ_GANADAS", 1);
+    sumarBandera("AJEDREZ_GANO_M" + (ajModelo + 1), 1);
+  } else if (ajResultado == 0) {
+    ef = "Notas +1 · Social +1";
+    msg = "Tablas. El señor te da la mano: «Juega usted bonito».";
+  } else {
+    ef = "Notas +1";
+    msg = "Perdiste, pero aprendiste un par de trampas nuevas.";
+  }
+  String r = aplicarEfectos(ef, -1);
+  if (r.equals("")) aviso(msg); else aviso(msg + "  (" + r + ")");
+  screen = 1;
+  cargado = 0;
+}
+
+// Después de cada jugada: ¿se acabó la partida?
+void ajRevisarFin() {
+  if (ajLegN == 0) {
+    if (ajEnJaque(ajTablero, ajInfo[AJ_TURNO])) {
+      if (ajInfo[AJ_TURNO] == -1) ajTerminar(1, "¡Jaque mate! Ganaste.");
+      else ajTerminar(-1, "Jaque mate. Ganó el señor de las mesas.");
+    } else {
+      ajTerminar(0, "Tablas por ahogado.");
+    }
+    return;
+  }
+  if (ajSoloReyes(ajTablero)) { ajTerminar(0, "Tablas: solo quedan los reyes."); return; }
+  if (ajJugadas >= AJ_MAX_JUGADAS) ajTerminar(0, "Tablas: llevan 60 jugadas cada uno.");
+}
+
+// ¿Quedan solo los dos reyes?
+boolean ajSoloReyes(int[][] b) {
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      if (b[f][c] != 0 && abs(b[f][c]) != AJ_REY) return false;
+    }
+  }
+  return true;
+}
+
+
+// ---------------------------------------------------------------------
+//  Dibujo
+// ---------------------------------------------------------------------
+void dibujarAjedrez() {
+  // fondo: el parque oscurecido
+  if (hay(fondos[K8])) image(fondos[K8], 0, 0, ANCHO, ALTO);
+  else background(60, 90, 60);
+  noStroke();
+  fill(15, 20, 30, 185);
+  rect(0, 0, ANCHO, ALTO);
+
+  // marco del tablero
+  fill(92, 62, 40);
+  rect(AJ_X - 18, AJ_Y - 18, 8 * AJ_TAM + 36, 8 * AJ_TAM + 36, 10);
+
+  // casillas
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      if ((f + c) % 2 == 0) fill(240, 217, 181); else fill(181, 136, 99);
+      rect(AJ_X + c * AJ_TAM, AJ_Y + f * AJ_TAM, AJ_TAM, AJ_TAM);
+    }
+  }
+  // última jugada
+  if (ajUltF1 >= 0) {
+    fill(205, 210, 106, 150);
+    rect(AJ_X + ajUltC1 * AJ_TAM, AJ_Y + ajUltF1 * AJ_TAM, AJ_TAM, AJ_TAM);
+    rect(AJ_X + ajUltC2 * AJ_TAM, AJ_Y + ajUltF2 * AJ_TAM, AJ_TAM, AJ_TAM);
+  }
+  // rey en jaque
+  if (ajEnJaque(ajTablero, ajInfo[AJ_TURNO])) {
+    ajBuscarRey(ajTablero, ajInfo[AJ_TURNO]);
+    fill(230, 60, 60, 170);
+    rect(AJ_X + resAjReyC * AJ_TAM, AJ_Y + resAjReyF * AJ_TAM, AJ_TAM, AJ_TAM);
+  }
+  // casilla seleccionada
+  if (ajSelF >= 0) {
+    fill(246, 246, 105, 170);
+    rect(AJ_X + ajSelC * AJ_TAM, AJ_Y + ajSelF * AJ_TAM, AJ_TAM, AJ_TAM);
+  }
+  // piezas
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      boolean esArrastrada = ajArrastrando && f == ajSelF && c == ajSelC;
+      if (ajTablero[f][c] != 0 && !esArrastrada) ajDibujarPieza(ajTablero[f][c], AJ_X + c * AJ_TAM, AJ_Y + f * AJ_TAM, AJ_TAM);
+    }
+  }
+  // destinos legales de la pieza seleccionada
+  for (int i = 0; i < ajLegN; i++) {
+    if (ajLegF1[i] == ajSelF && ajLegC1[i] == ajSelC && (ajLegPromo[i] == 0 || ajLegPromo[i] == AJ_DAMA)) {
+      float x = AJ_X + ajLegC2[i] * AJ_TAM + AJ_TAM / 2;
+      float y = AJ_Y + ajLegF2[i] * AJ_TAM + AJ_TAM / 2;
+      boolean alPaso = abs(ajTablero[ajSelF][ajSelC]) == AJ_PEON && ajLegF2[i] == ajInfo[AJ_EP_F] && ajLegC2[i] == ajInfo[AJ_EP_C];
+      if (ajTablero[ajLegF2[i]][ajLegC2[i]] != 0 || alPaso) {
+        noFill();
+        stroke(0, 0, 0, 70);
+        strokeWeight(6);
+        ellipse(x, y, AJ_TAM - 8, AJ_TAM - 8);
+        noStroke();
+        strokeWeight(1);
+      } else {
+        fill(0, 0, 0, 60);
+        ellipse(x, y, AJ_TAM * 0.3, AJ_TAM * 0.3);
+      }
+    }
+  }
+  // coordenadas
+  fill(235, 220, 200);
+  textSize(15);
+  textAlign(CENTER, CENTER);
+  for (int i = 0; i < 8; i++) {
+    text(str(8 - i), AJ_X - 9, AJ_Y + i * AJ_TAM + AJ_TAM / 2);
+    text(AJ_COLUMNAS[i], AJ_X + i * AJ_TAM + AJ_TAM / 2, AJ_Y + 8 * AJ_TAM + 9);
+  }
+  // pieza arrastrada (encima de todo)
+  if (ajArrastrando && ajSelF >= 0) ajDibujarPieza(ajTablero[ajSelF][ajSelC], mouseX - AJ_TAM / 2, mouseY - AJ_TAM / 2, AJ_TAM);
+
+  ajDibujarPaneles();
+  if (ajEstado == 1) ajDibujarFinal();
+  if (ajEstado == 2) ajDibujarSelector();
+  textAlign(LEFT, BASELINE);
+}
+
+// Una pieza en (x, y) con lado t: el sprite si está, si no un círculo con la letra.
+void ajDibujarPieza(int p, float x, float y, float t) {
+  int tipo = abs(p);
+  int fila = 0;
+  if (p < 0) fila = 1;
+  if (hay(ajPiezas)) {
+    dibujarHoja(ajPiezas, 80, 80, fila, AJ_COL_SPRITE[tipo], x, y, t / 80.0);
+    return;
+  }
+  strokeWeight(2);
+  if (p > 0) { stroke(40); fill(250); } else { stroke(220); fill(30); }
+  ellipse(x + t / 2, y + t / 2, t * 0.72, t * 0.72);
+  noStroke();
+  strokeWeight(1);
+  if (p > 0) fill(30); else fill(250);
+  textAlign(CENTER, CENTER);
+  textSize(t * 0.38);
+  text(AJ_LETRAS[tipo], x + t / 2, y + t / 2 - 3);
+}
+
+// Paneles de los lados: quién juega, piezas capturadas y botón de rendirse.
+void ajDibujarPaneles() {
+  // izquierda: el rival y lo que te ha comido
+  fill(250, 245, 235, 235);
+  rect(60, 98, 330, 330, 14);
+  rect(60, 450, 330, 352, 14);
+  fill(40);
+  textAlign(LEFT, TOP);
+  textSize(24);
+  text("El señor de las mesas", 80, 114);
+  textSize(17);
+  fill(90);
+  text("Juega con las negras · " + AJ_MODELO_NOMBRE[ajModelo], 80, 146);
+  fill(40);
+  if (ajEstado == 0 && ajBotDesde > 0) {
+    int puntos = ((millis() - ajBotDesde) / 250) % 4;
+    String t = "Pensando";
+    for (int k = 0; k < puntos; k++) t = t + ".";
+    text(t, 80, 186);
+  } else if (!ajUltimoBot.equals("")) {
+    text("Su última jugada: " + ajUltimoBot, 80, 186);
+  }
+  text("Te ha comido:", 80, 230);
+  ajDibujarCapturadas(1, 80, 258);
+
+  textSize(24);
+  text("Tú", 80, 466);
+  textSize(17);
+  fill(90);
+  text("Juegas con las blancas", 80, 498);
+  fill(40);
+  text("Le has comido:", 80, 540);
+  ajDibujarCapturadas(-1, 80, 568);
+  fill(90);
+  text("Jugada " + (ajJugadas / 2 + 1) + " de " + (AJ_MAX_JUGADAS / 2), 80, 700);
+  if (ajEstado == 0) {
+    if (ajInfo[AJ_TURNO] == 1) { fill(40, 120, 60); text("Te toca mover.", 80, 730); }
+    else { fill(150, 90, 40); text("Le toca a él.", 80, 730); }
+  }
+
+  // derecha: cómo se juega y rendirse
+  fill(250, 245, 235, 235);
+  rect(1210, 98, 330, 400, 14);
+  fill(40);
+  textSize(24);
+  text("Ajedrez en el parque", 1230, 114);
+  textSize(16);
+  fill(70);
+  text("Click en tu pieza y después en la\ncasilla a donde va, o arrástrala.\n\nLos puntos son las casillas a\ndonde puede ir. El círculo marca\nuna pieza que se puede comer.\n\nAl coronar, el peón se vuelve dama.\n\nSi nadie gana en 60 jugadas,\nson tablas.", 1230, 160);
+  if (ajEstado == 0) ajBoton(ajBotRendirse, 1230, 520, 290, 64, "Rendirse", color(170, 70, 60));
+  textAlign(LEFT, BASELINE);
+}
+
+// Piezas del bando s que ya no están en el tablero, en fila.
+void ajDibujarCapturadas(int s, float x, float y) {
+  int[] quedan = new int[7];
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      if (ajTablero[f][c] * s > 0) quedan[abs(ajTablero[f][c])]++;
+    }
+  }
+  float px = x, py = y;
+  for (int t = AJ_DAMA; t >= AJ_PEON; t--) {
+    int faltan = AJ_CANT_INICIAL[t] - quedan[t];
+    for (int k = 0; k < faltan; k++) {
+      ajDibujarPieza(s * t, px, py, 36);
+      px = px + 30;
+      if (px > x + 260) { px = x; py = py + 40; }
+    }
+  }
+}
+
+// Botón con sprite: minijuegos/ajedrez/botones/<img>.png del tamaño w x h (sube 2 px con el mouse encima).
+// Si falta el sprite, un rectángulo del color c con el texto.
+PImage ajBotRendirse = null, ajBotVolver = null;
+boolean ajBotonesBuscados = false;
+
+void ajBoton(PImage img, float x, float y, float w, float h, String t, int c) {
+  noStroke();
+  boolean encima = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+  float sube = 0;
+  if (encima) sube = 2;
+  if (hay(img)) {
+    image(img, x, y - sube, w, h);
+  } else {
+    if (encima) fill(lerpColor(c, color(255), 0.2)); else fill(c);
+    rect(x, y - sube, w, h, 12);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(24);
+    text(t, x + w / 2, y - sube + h / 2 - 2);
+  }
+  textAlign(LEFT, TOP);
+}
+
+// Antes de empezar: contra qué modelo juegas. Botones minijuegos/ajedrez/botones/modelo_1.png ... (600x90)
+PImage[] ajBotModelo = new PImage[AJ_MODELOS];
+boolean ajBotModeloBuscados = false;
+
+void ajDibujarSelector() {
+  if (!ajBotModeloBuscados) {
+    ajBotModeloBuscados = true;
+    for (int k = 0; k < AJ_MODELOS; k++) ajBotModelo[k] = cargarSiExiste("minijuegos/ajedrez/botones/modelo_" + (k + 1) + ".png");
+  }
+  noStroke();
+  fill(0, 0, 0, 170);
+  rect(AJ_X, AJ_Y, 8 * AJ_TAM, 8 * AJ_TAM);
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(28);
+  text("¿Contra qué versión juegas?", AJ_X + 4 * AJ_TAM, AJ_Y + 90);
+  for (int k = 0; k < AJ_MODELOS; k++) {
+    float x = AJ_X + 52, y = AJ_Y + 150 + k * 130;
+    boolean hayModelo = AJ_W1S[k] != null;
+    if (hayModelo) ajBoton(ajBotModelo[k], x, y, 600, 90, AJ_MODELO_NOMBRE[k], color(70, 110, 170));
+    else if (hay(ajBotModelo[k])) {
+      tint(110);
+      image(ajBotModelo[k], x, y, 600, 90);
+      noTint();
+    } else {
+      fill(90, 90, 100);
+      rect(x, y, 600, 90, 12);
+      fill(170);
+      textAlign(CENTER, CENTER);
+      textSize(24);
+      text(AJ_MODELO_NOMBRE[k], x + 300, y + 43);
+    }
+    fill(220);
+    textAlign(CENTER, TOP);
+    textSize(16);
+    text(AJ_MODELO_TEXTO[k], x + 300, y + 96);
+  }
+}
+
+// Cartel del final con el resultado y el botón para volver.
+void ajDibujarFinal() {
+  noStroke();
+  fill(0, 0, 0, 150);
+  rect(AJ_X, AJ_Y + 3 * AJ_TAM - 20, 8 * AJ_TAM, 2 * AJ_TAM + 110, 12);
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(34);
+  text(ajMotivo, AJ_X + 4 * AJ_TAM, AJ_Y + 3 * AJ_TAM + 30);
+  ajBoton(ajBotVolver, AJ_X + 4 * AJ_TAM - 160, AJ_Y + 4 * AJ_TAM + 20, 320, 70, "Volver al parque", color(60, 130, 80));
+}
+
+
+// ---------------------------------------------------------------------
+//  Mouse
+// ---------------------------------------------------------------------
+void clickAjedrez() {
+  if (ajEstado == 2) {
+    for (int k = 0; k < AJ_MODELOS; k++) {
+      if (AJ_W1S[k] != null && mouseX >= AJ_X + 52 && mouseX <= AJ_X + 652 && mouseY >= AJ_Y + 150 + k * 130 && mouseY <= AJ_Y + 240 + k * 130) {
+        ajModelo = k;
+        ajEstado = 0;
+      }
+    }
+    return;
+  }
+  if (ajEstado == 1) {
+    float bx = AJ_X + 4 * AJ_TAM - 160, by = AJ_Y + 4 * AJ_TAM + 20;
+    if (mouseX >= bx && mouseX <= bx + 320 && mouseY >= by && mouseY <= by + 70) salirAjedrez();
+    return;
+  }
+  if (mouseX >= 1230 && mouseX <= 1520 && mouseY >= 520 && mouseY <= 584) {
+    ajTerminar(-1, "Te rendiste.");
+    return;
+  }
+  // solo mueves tú y solo cuando te toca
+  if (ajInfo[AJ_TURNO] != 1 || ajBotDesde > 0) return;
+  int f = floor((mouseY - AJ_Y) / AJ_TAM);
+  int c = floor((mouseX - AJ_X) / AJ_TAM);
+  if (f < 0 || f > 7 || c < 0 || c > 7) { ajDeseleccionar(); return; }
+  int m = ajBuscarDestino(f, c);
+  if (m >= 0) {
+    ajHacerMovimiento(m);
+    return;
+  }
+  if (ajTablero[f][c] > 0) {
+    ajSelF = f;
+    ajSelC = c;
+    ajArrastrando = true;
+  } else {
+    ajDeseleccionar();
+  }
+}
+
+// Al soltar el mouse: si arrastraba una pieza a una casilla legal, la mueve.
+void soltarAjedrez() {
+  if (!ajArrastrando) return;
+  ajArrastrando = false;
+  int f = floor((mouseY - AJ_Y) / AJ_TAM);
+  int c = floor((mouseX - AJ_X) / AJ_TAM);
+  if (f == ajSelF && c == ajSelC) return;
+  if (f < 0 || f > 7 || c < 0 || c > 7) return;
+  int m = ajBuscarDestino(f, c);
+  if (m >= 0) ajHacerMovimiento(m);
+}
+
+// Posición de la jugada legal de la pieza seleccionada hacia (f, c), o -1 (al coronar toma la dama).
+int ajBuscarDestino(int f, int c) {
+  int i = 0;
+  while (i < ajLegN) {
+    if (ajLegF1[i] == ajSelF && ajLegC1[i] == ajSelC && ajLegF2[i] == f && ajLegC2[i] == c) return i;
+    i++;
+  }
+  return -1;
+}
+
+// Hace la jugada i de la lista de legales. Si después le toca al bot, empieza a pensar.
+void ajHacerMovimiento(int i) {
+  ajUltF1 = ajLegF1[i];
+  ajUltC1 = ajLegC1[i];
+  ajUltF2 = ajLegF2[i];
+  ajUltC2 = ajLegC2[i];
+  ajAplicarMovimiento(ajTablero, ajInfo, ajLegF1[i], ajLegC1[i], ajLegF2[i], ajLegC2[i], ajLegPromo[i]);
+  ajJugadas++;
+  ajDeseleccionar();
+  ajGenerarLegales(ajTablero, ajInfo);
+  ajRevisarFin();
+  if (ajEstado == 0 && ajInfo[AJ_TURNO] == -1) ajBotDesde = millis();
+}
+
+void ajDeseleccionar() {
+  ajSelF = -1;
+  ajSelC = -1;
+  ajArrastrando = false;
+}
+
+// La jugada i como texto: e2e4, e7e8=D...
+String ajTextoMovimiento(int i) {
+  return AJ_COLUMNAS[ajLegC1[i]] + (8 - ajLegF1[i]) + AJ_COLUMNAS[ajLegC2[i]] + (8 - ajLegF2[i]) + AJ_PROMO_LETRA[ajLegPromo[i]];
+}
+
+
+// ---------------------------------------------------------------------
+//  Bot: le pone puntaje a cada jugada legal y juega la mejor
+// ---------------------------------------------------------------------
+void ajJugarBot() {
+  if (ajLegN == 0) return;
+  int mejor = 0;
+  for (int i = 0; i < ajLegN; i++) {
+    ajCopiarPosicion(ajTablero, ajInfo, ajBotB, ajBotInfo);
+    ajAplicarMovimiento(ajBotB, ajBotInfo, ajLegF1[i], ajLegC1[i], ajLegF2[i], ajLegC2[i], ajLegPromo[i]);
+    ajCalcularCaracteristicas(ajBotB, ajBotInfo);
+    float v = ajEvaluar(resAjCaract);         // desde el punto de vista de las blancas
+    if (ajInfo[AJ_TURNO] == 1) ajLegPuntaje[i] = v; else ajLegPuntaje[i] = -v;
+    if (ajLegPuntaje[i] > ajLegPuntaje[mejor]) mejor = i;
+  }
+  ajUltimoBot = ajTextoMovimiento(mejor);
+  ajHacerMovimiento(mejor);
+}
+
+
+// ---------------------------------------------------------------------
+//  Las 9 características (blancas menos negras). Quedan en resAjCaract.
+//  [0] Material   [1] Movilidad  [2] Centro
+//  [3] Peones     [4] Rey        [5] Desarrollo
+//  [6] Amenazas   [7] Espacio    [8] Estructura
+// ---------------------------------------------------------------------
+void ajCalcularCaracteristicas(int[][] b, int[] inf) {
+  boolean[][] atB = new boolean[8][8];
+  boolean[][] atN = new boolean[8][8];
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      atB[f][c] = ajAtacada(b, f, c, 1);
+      atN[f][c] = ajAtacada(b, f, c, -1);
+    }
+  }
+
+  float mat = 0, centro = 0, peones = 0, desarrollo = 0, amenazas = 0, espacio = 0;
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      int p = b[f][c];
+      int t = abs(p);
+      int s = 0;
+      if (p > 0) s = 1;
+      if (p < 0) s = -1;
+
+      // material
+      mat = mat + s * AJ_VALOR[t];
+      // centro: ocupar o atacar d4 e4 d5 e5
+      if (f >= 3 && f <= 4 && c >= 3 && c <= 4) {
+        centro = centro + s;
+        if (atB[f][c]) centro = centro + 0.5;
+        if (atN[f][c]) centro = centro - 0.5;
+      }
+      // avance de los peones
+      if (t == AJ_PEON) {
+        if (s > 0) peones = peones + (6 - f); else peones = peones - (f - 1);
+      }
+      // desarrollo: caballos y alfiles fuera de su fila inicial
+      if (t == AJ_CABALLO || t == AJ_ALFIL) {
+        if (s > 0 && f != 7) desarrollo = desarrollo + 1;
+        if (s < 0 && f != 0) desarrollo = desarrollo - 1;
+      }
+      // amenazas: piezas enemigas atacadas
+      if (s < 0 && atB[f][c]) amenazas = amenazas + AJ_VALOR[t];
+      if (s > 0 && atN[f][c]) amenazas = amenazas - AJ_VALOR[t];
+      // espacio: casillas atacadas en la mitad del rival
+      if (f <= 3 && atB[f][c]) espacio = espacio + 1;
+      if (f >= 4 && atN[f][c]) espacio = espacio - 1;
+    }
+  }
+
+  // movilidad
+  ajGenerarPseudo(b, inf, 1);
+  int movB = ajPsN;
+  ajGenerarPseudo(b, inf, -1);
+  int movN = ajPsN;
+
+  resAjCaract[0] = mat / 39.0;
+  resAjCaract[1] = (movB - movN) / 40.0;
+  resAjCaract[2] = centro / 6.0;
+  resAjCaract[3] = peones / 20.0;
+  resAjCaract[4] = (ajEscudoRey(b, 1) - ajEscudoRey(b, -1)) / 3.0;
+  resAjCaract[5] = desarrollo / 4.0;
+  resAjCaract[6] = amenazas / 15.0;
+  resAjCaract[7] = espacio / 20.0;
+  resAjCaract[8] = (ajMalosPeones(b, -1) - ajMalosPeones(b, 1)) / 6.0;
+}
+
+// Peones propios justo delante del rey (0 a 3).
+int ajEscudoRey(int[][] b, int s) {
+  ajBuscarRey(b, s);
+  int fila = resAjReyF - s;
+  int n = 0;
+  if (fila >= 0 && fila <= 7) {
+    for (int dc = -1; dc <= 1; dc++) {
+      int c = resAjReyC + dc;
+      if (c >= 0 && c < 8 && b[fila][c] == s * AJ_PEON) n++;
+    }
+  }
+  return n;
+}
+
+// Peones doblados + aislados del bando s.
+int ajMalosPeones(int[][] b, int s) {
+  int[] porCol = new int[8];
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      if (b[f][c] == s * AJ_PEON) porCol[c]++;
+    }
+  }
+  int malos = 0;
+  for (int c = 0; c < 8; c++) {
+    if (porCol[c] > 1) malos = malos + porCol[c] - 1;
+    boolean izq = c > 0 && porCol[c - 1] > 0;
+    boolean der = c < 7 && porCol[c + 1] > 0;
+    if (porCol[c] > 0 && !izq && !der) malos = malos + porCol[c];
+  }
+  return malos;
+}
+
+
+// ---------------------------------------------------------------------
+//  Reglas del ajedrez
+// ---------------------------------------------------------------------
+boolean ajEnTablero(int f, int c) {
+  return f >= 0 && f < 8 && c >= 0 && c < 8;
+}
+
+void ajPosicionInicial(int[][] b, int[] inf) {
+  int[] fondo = {AJ_TORRE, AJ_CABALLO, AJ_ALFIL, AJ_DAMA, AJ_REY, AJ_ALFIL, AJ_CABALLO, AJ_TORRE};
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      b[f][c] = 0;
+    }
+  }
+  for (int c = 0; c < 8; c++) {
+    b[0][c] = -fondo[c];
+    b[1][c] = -AJ_PEON;
+    b[6][c] = AJ_PEON;
+    b[7][c] = fondo[c];
+  }
+  inf[AJ_TURNO] = 1;
+  inf[AJ_ENR_BC] = 1;
+  inf[AJ_ENR_BL] = 1;
+  inf[AJ_ENR_NC] = 1;
+  inf[AJ_ENR_NL] = 1;
+  inf[AJ_EP_F] = -1;
+  inf[AJ_EP_C] = -1;
+}
+
+void ajCopiarPosicion(int[][] b, int[] inf, int[][] b2, int[] inf2) {
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      b2[f][c] = b[f][c];
+    }
+  }
+  for (int i = 0; i < 7; i++) {
+    inf2[i] = inf[i];
+  }
+}
+
+void ajAplicarMovimiento(int[][] b, int[] inf, int f1, int c1, int f2, int c2, int promo) {
+  int p = b[f1][c1];
+  int tipo = abs(p);
+  int s = 1;
+  if (p < 0) s = -1;
+
+  // captura al paso: quitar el peón capturado
+  if (tipo == AJ_PEON && c1 != c2 && b[f2][c2] == 0) b[f1][c2] = 0;
+  // enroque: mover la torre
+  if (tipo == AJ_REY && abs(c2 - c1) == 2) {
+    if (c2 == 6) {
+      b[f1][5] = b[f1][7];
+      b[f1][7] = 0;
+    } else {
+      b[f1][3] = b[f1][0];
+      b[f1][0] = 0;
+    }
+  }
+  b[f2][c2] = p;
+  b[f1][c1] = 0;
+  // coronación
+  if (tipo == AJ_PEON && (f2 == 0 || f2 == 7)) {
+    if (promo > 0) b[f2][c2] = s * promo; else b[f2][c2] = s * AJ_DAMA;
+  }
+  // nueva casilla de captura al paso
+  inf[AJ_EP_F] = -1;
+  inf[AJ_EP_C] = -1;
+  if (tipo == AJ_PEON && abs(f2 - f1) == 2) {
+    inf[AJ_EP_F] = (f1 + f2) / 2;
+    inf[AJ_EP_C] = c1;
+  }
+  // derechos de enroque
+  if (tipo == AJ_REY) {
+    if (s > 0) {
+      inf[AJ_ENR_BC] = 0;
+      inf[AJ_ENR_BL] = 0;
+    } else {
+      inf[AJ_ENR_NC] = 0;
+      inf[AJ_ENR_NL] = 0;
+    }
+  }
+  ajQuitarEnroque(inf, f1, c1);
+  ajQuitarEnroque(inf, f2, c2);
+  inf[AJ_TURNO] = -inf[AJ_TURNO];
+}
+
+// Si se mueve o se come una torre en su esquina, se pierde ese enroque.
+void ajQuitarEnroque(int[] inf, int f, int c) {
+  if (f == 7 && c == 7) inf[AJ_ENR_BC] = 0;
+  if (f == 7 && c == 0) inf[AJ_ENR_BL] = 0;
+  if (f == 0 && c == 7) inf[AJ_ENR_NC] = 0;
+  if (f == 0 && c == 0) inf[AJ_ENR_NL] = 0;
+}
+
+// ¿La casilla (f, c) está atacada por el bando s (1 blancas, -1 negras)?
+boolean ajAtacada(int[][] b, int f, int c, int s) {
+  // peones (los blancos atacan hacia arriba, o sea que están en f + 1)
+  int pf = f + s;
+  if (ajEnTablero(pf, c - 1) && b[pf][c - 1] == s * AJ_PEON) return true;
+  if (ajEnTablero(pf, c + 1) && b[pf][c + 1] == s * AJ_PEON) return true;
+  for (int i = 0; i < 8; i++) {
+    int nf = f + AJ_SALTOS_CABALLO[i][0];
+    int nc = c + AJ_SALTOS_CABALLO[i][1];
+    if (ajEnTablero(nf, nc) && b[nf][nc] == s * AJ_CABALLO) return true;
+  }
+  for (int i = 0; i < 8; i++) {
+    int nf = f + AJ_DIR_REY[i][0];
+    int nc = c + AJ_DIR_REY[i][1];
+    if (ajEnTablero(nf, nc) && b[nf][nc] == s * AJ_REY) return true;
+  }
+  if (ajRayo(b, f, c, AJ_DIR_TORRE, s * AJ_TORRE, s * AJ_DAMA)) return true;
+  if (ajRayo(b, f, c, AJ_DIR_ALFIL, s * AJ_ALFIL, s * AJ_DAMA)) return true;
+  return false;
+}
+
+// Recorre cada dirección hasta chocar; true si choca con p1 o p2.
+boolean ajRayo(int[][] b, int f, int c, int[][] dirs, int p1, int p2) {
+  for (int d = 0; d < dirs.length; d++) {
+    int nf = f + dirs[d][0];
+    int nc = c + dirs[d][1];
+    boolean seguir = true;
+    while (seguir && ajEnTablero(nf, nc)) {
+      int p = b[nf][nc];
+      if (p != 0) {
+        if (p == p1 || p == p2) return true;
+        seguir = false;
+      } else {
+        nf = nf + dirs[d][0];
+        nc = nc + dirs[d][1];
+      }
+    }
+  }
+  return false;
+}
+
+// Deja la casilla del rey del bando s en resAjReyF, resAjReyC (-1 si no está).
+void ajBuscarRey(int[][] b, int s) {
+  resAjReyF = -1;
+  resAjReyC = -1;
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      if (b[f][c] == s * AJ_REY) {
+        resAjReyF = f;
+        resAjReyC = c;
+      }
+    }
+  }
+}
+
+boolean ajEnJaque(int[][] b, int s) {
+  ajBuscarRey(b, s);
+  if (resAjReyF < 0) return false;
+  return ajAtacada(b, resAjReyF, resAjReyC, -s);
+}
+
+// Jugadas legales: las de ajGenerarPseudo que no dejan al propio rey en jaque.
+// Quedan en ajLegF1, ajLegC1, ajLegF2, ajLegC2, ajLegPromo y ajLegN.
+void ajGenerarLegales(int[][] b, int[] inf) {
+  ajGenerarPseudo(b, inf, inf[AJ_TURNO]);
+  ajLegN = 0;
+  for (int i = 0; i < ajPsN; i++) {
+    ajCopiarPosicion(b, inf, ajPruebaB, ajPruebaInfo);
+    ajAplicarMovimiento(ajPruebaB, ajPruebaInfo, ajPsF1[i], ajPsC1[i], ajPsF2[i], ajPsC2[i], ajPsPromo[i]);
+    if (!ajEnJaque(ajPruebaB, inf[AJ_TURNO])) {
+      ajLegF1[ajLegN] = ajPsF1[i];
+      ajLegC1[ajLegN] = ajPsC1[i];
+      ajLegF2[ajLegN] = ajPsF2[i];
+      ajLegC2[ajLegN] = ajPsC2[i];
+      ajLegPromo[ajLegN] = ajPsPromo[i];
+      ajLegN++;
+    }
+  }
+}
+
+// Jugadas según cómo se mueve cada pieza del bando s.
+// Quedan en ajPsF1, ajPsC1, ajPsF2, ajPsC2, ajPsPromo y ajPsN.
+void ajGenerarPseudo(int[][] b, int[] inf, int s) {
+  ajPsN = 0;
+  for (int f = 0; f < 8; f++) {
+    for (int c = 0; c < 8; c++) {
+      int p = b[f][c];
+      if (p * s > 0) {
+        int t = abs(p);
+        if (t == AJ_PEON) {
+          ajMovPeon(b, inf, f, c, s);
+        } else if (t == AJ_CABALLO) {
+          ajMovSaltos(b, f, c, s, AJ_SALTOS_CABALLO);
+        } else if (t == AJ_ALFIL) {
+          ajMovDeslizar(b, f, c, s, AJ_DIR_ALFIL);
+        } else if (t == AJ_TORRE) {
+          ajMovDeslizar(b, f, c, s, AJ_DIR_TORRE);
+        } else if (t == AJ_DAMA) {
+          ajMovDeslizar(b, f, c, s, AJ_DIR_ALFIL);
+          ajMovDeslizar(b, f, c, s, AJ_DIR_TORRE);
+        } else if (t == AJ_REY) {
+          ajMovSaltos(b, f, c, s, AJ_DIR_REY);
+          ajMovEnroques(b, inf, f, c, s);
+        }
+      }
+    }
+  }
+}
+
+void ajAgregarPseudo(int f1, int c1, int f2, int c2, int promo) {
+  if (ajPsN < AJ_MAX_MOV) {
+    ajPsF1[ajPsN] = f1;
+    ajPsC1[ajPsN] = c1;
+    ajPsF2[ajPsN] = f2;
+    ajPsC2[ajPsN] = c2;
+    ajPsPromo[ajPsN] = promo;
+    ajPsN++;
+  }
+}
+
+void ajMovPeon(int[][] b, int[] inf, int f, int c, int s) {
+  int dir = -s;                 // las blancas suben (la fila baja)
+  int inicio = 1;
+  if (s > 0) inicio = 6;
+  int f2 = f + dir;
+  if (ajEnTablero(f2, c)) {
+    if (b[f2][c] == 0) {
+      ajAgregarPeon(f, c, f2, c);
+      if (f == inicio && b[f + 2 * dir][c] == 0) ajAgregarPseudo(f, c, f + 2 * dir, c, 0);
+    }
+    for (int dc = -1; dc <= 1; dc = dc + 2) {
+      int c2 = c + dc;
+      if (ajEnTablero(f2, c2)) {
+        if (b[f2][c2] * s < 0) {
+          ajAgregarPeon(f, c, f2, c2);
+        } else if (f2 == inf[AJ_EP_F] && c2 == inf[AJ_EP_C]) {
+          ajAgregarPseudo(f, c, f2, c2, 0);
+        }
+      }
+    }
+  }
+}
+
+// Si el peón llega a la última fila agrega las 4 coronaciones (primero la dama).
+void ajAgregarPeon(int f, int c, int f2, int c2) {
+  if (f2 == 0 || f2 == 7) {
+    ajAgregarPseudo(f, c, f2, c2, AJ_DAMA);
+    ajAgregarPseudo(f, c, f2, c2, AJ_TORRE);
+    ajAgregarPseudo(f, c, f2, c2, AJ_ALFIL);
+    ajAgregarPseudo(f, c, f2, c2, AJ_CABALLO);
+  } else {
+    ajAgregarPseudo(f, c, f2, c2, 0);
+  }
+}
+
+// Caballo y rey: un solo paso en cada dirección.
+void ajMovSaltos(int[][] b, int f, int c, int s, int[][] dirs) {
+  for (int i = 0; i < dirs.length; i++) {
+    int nf = f + dirs[i][0];
+    int nc = c + dirs[i][1];
+    if (ajEnTablero(nf, nc) && b[nf][nc] * s <= 0) ajAgregarPseudo(f, c, nf, nc, 0);
+  }
+}
+
+// Alfil, torre y dama: avanzan hasta chocar.
+void ajMovDeslizar(int[][] b, int f, int c, int s, int[][] dirs) {
+  for (int d = 0; d < dirs.length; d++) {
+    int nf = f + dirs[d][0];
+    int nc = c + dirs[d][1];
+    boolean seguir = true;
+    while (seguir && ajEnTablero(nf, nc)) {
+      if (b[nf][nc] * s > 0) {
+        seguir = false;                  // pieza propia
+      } else {
+        ajAgregarPseudo(f, c, nf, nc, 0);
+        if (b[nf][nc] != 0) {
+          seguir = false;                // la come y no sigue
+        } else {
+          nf = nf + dirs[d][0];
+          nc = nc + dirs[d][1];
+        }
+      }
+    }
+  }
+}
+
+void ajMovEnroques(int[][] b, int[] inf, int f, int c, int s) {
+  int fila = 0;
+  int corto = AJ_ENR_NC;
+  int largo = AJ_ENR_NL;
+  if (s > 0) {
+    fila = 7;
+    corto = AJ_ENR_BC;
+    largo = AJ_ENR_BL;
+  }
+  // no se enroca estando en jaque ni pasando por casillas atacadas
+  if (f == fila && c == 4 && !ajAtacada(b, fila, 4, -s)) {
+    if (inf[corto] == 1 && b[fila][5] == 0 && b[fila][6] == 0 && b[fila][7] == s * AJ_TORRE
+      && !ajAtacada(b, fila, 5, -s) && !ajAtacada(b, fila, 6, -s)) {
+      ajAgregarPseudo(fila, 4, fila, 6, 0);
+    }
+    if (inf[largo] == 1 && b[fila][1] == 0 && b[fila][2] == 0 && b[fila][3] == 0 && b[fila][0] == s * AJ_TORRE
+      && !ajAtacada(b, fila, 3, -s) && !ajAtacada(b, fila, 2, -s)) {
+      ajAgregarPseudo(fila, 4, fila, 2, 0);
+    }
+  }
+}
+
+// ============================ MODERADOR: TOWER DEFENSE (pantalla propia: screen 5) ============================
+// Está en las máquinas de PixelZone (opción 4). Igual que el ajedrez, tiene su propio espacio en el draw:
+// mientras juegas, el resto del juego se detiene. No toca la historia: solo da stats al salir.
+// Defiendes "tu feed" de spam, bots, haters y virus poniendo torres de moderación en lugares fijos.
+//
+// Cómo están guardados los niveles (TD_NIVELES, una fila por nivel):
+//   [0] 1 si ya está desbloqueado    [1] número de la imagen de fondo (mapa_N+1.png)
+//   [2] n = cuántos lugares para torres    luego n pares x, y (uno por lugar)
+//   luego las olas: -1, segundos que dura la ola, y pares (cantidad, enemigo) hasta el siguiente -1
+// El camino de cada nivel va aparte, en TD_CAMINOS: x, y del origen y luego x, y de cada punto de giro.
+// Los enemigos van del origen al primer punto, de ahí al segundo, y así hasta el último (tu feed).
+//
+// Sprites (todos opcionales: si falta uno se dibuja con figuras). Carpeta data/minijuegos/moderador/:
+//   mapa_1.png ... mapa_5.png (1600x900), menu_niveles.png (1600x900), lugar.png (96x96),
+//   torres.png (celdas 96x96: fila = torre, columnas = nivel 1, 2, 3, 4, A5, A6, B5, B6),
+//   enemigos.png (celdas 64x64: fila = enemigo, 4 cuadros caminando), proyectiles.png (celdas 32x32:
+//   flecha, bomba, minibomba), explosion.png (4 cuadros de 128x128), fuego_suelo.png (4 de 96x96),
+//   muro_fuego.png (4 cuadros de 128x96), feed.png (128x128, la meta), ramas.png (8 iconos de 96x96),
+//   iconos.png (celdas 64x64: vidas, karma, pausa, play, x2, siguiente ola, vender, candado, ganado,
+//   aturdido, quemando).
+
+final int TD_N = 5;
+final int TD_MAX_LUGARES = 12;
+final int TD_MAX_ENE = 160;
+final int TD_MAX_PROY = 90;
+final int TD_MAX_EFE = 60;
+final int TD_MAX_FUEGO = 24;
+final int TD_VIDAS = 20;
+final float TD_HUD = 64;
+
+String[] TD_NOMBRES = {"El grupo del salón", "Comentarios de Aurora+", "El directo de PixelLive", "La bandeja de DM", "Tendencia viral"};
+String[] TD_DESCRIPCION = {
+  "Llegó la cadena de spam.\nAprende a reportar.",
+  "Los haters bajan\nen zigzag.",
+  "Cuentas verificadas\nfalsas: tienen armadura.",
+  "Virus: al morir se\nparten en bots.",
+  "La cadena viral.\nEl jefe final."
+};
+int[] TD_KARMA_INICIAL = {180, 220, 260, 300, 350};
+
+int[][] TD_NIVELES;   // se llena en datos_TD()
+
+int[][] TD_CAMINOS;   // se llena en datos_TD()
+
+// ---- Enemigos: { vida, velocidad (px por cuadro), karma que dan, vidas que quitan, armadura, radio } ----
+// La armadura se le resta a cada golpe (mínimo 1 de daño).
+String[] TD_ENE_NOMBRE = {"Spam", "Bot", "Hater", "Verificado falso", "Virus", "Cadena viral"};
+float[][] TD_ENEMIGOS;   // se llena en datos_TD()
+final int TD_JEFE = 5, TD_VIRUS = 4, TD_BOT = 1;
+
+// Llena las tablas del Moderador (en su propia función por el límite de 64 KB por método de Java).
+void datos_TD() {
+  TD_NIVELES = new int[][] {
+    {1, 0, 6, 330, 380, 600, 400, 360, 560, 790, 560, 970, 780, 1230, 460, -1, 20, 6, 0, -1, 22, 10, 0, -1, 25, 8, 0, 6, 1, -1, 25, 12, 0, 10, 1, -1, 30, 15, 0, 3, 2},
+    {0, 1, 8, 220, 330, 480, 450, 560, 600, 640, 350, 880, 600, 960, 360, 1280, 600, 1400, 840, -1, 20, 13, 0, -1, 22, 8, 0, 5, 2, -1, 25, 20, 1, 6, 2, -1, 25, 16, 0, 10, 2, -1, 28, 26, 1, 10, 2, -1, 32, 13, 0, 16, 2, 26, 1},
+    {0, 2, 9, 680, 130, 430, 380, 180, 450, 560, 480, 800, 750, 1050, 480, 1180, 370, 1430, 380, 700, 380, -1, 22, 8, 2, -1, 25, 4, 3, 10, 0, -1, 25, 20, 1, 6, 3, -1, 28, 10, 2, 8, 3, -1, 30, 25, 1, 10, 3, -1, 35, 12, 2, 12, 3, 20, 0},
+    {0, 3, 10, 400, 290, 800, 290, 1200, 290, 1520, 290, 320, 550, 700, 550, 1100, 550, 80, 560, 600, 800, 1000, 800, -1, 22, 6, 4, -1, 25, 15, 2, 6, 4, -1, 28, 12, 3, 9, 4, -1, 28, 45, 1, 12, 4, -1, 30, 18, 3, 15, 4, -1, 32, 22, 2, 18, 4, 15, 3, -1, 40, 30, 4, 22, 3, 60, 1},
+    {0, 4, 11, 400, 700, 800, 700, 1200, 700, 1530, 480, 1320, 260, 900, 260, 500, 260, 270, 400, 650, 490, 1000, 490, 1320, 480, -1, 25, 15, 0, 10, 2, -1, 28, 10, 3, 8, 4, -1, 30, 40, 1, 12, 2, -1, 30, 15, 4, 12, 3, -1, 32, 20, 2, 15, 4, -1, 35, 20, 3, 40, 1, -1, 40, 1, 5, 20, 1, -1, 50, 1, 5, 20, 4, 20, 3}
+  };
+  TD_CAMINOS = new int[][] {
+    {-40, 260, 480, 260, 480, 680, 1100, 680, 1100, 330, 1640, 330},
+    {-40, 200, 360, 200, 360, 720, 760, 720, 760, 240, 1160, 240, 1160, 720, 1640, 720},
+    {800, -40, 800, 250, 300, 250, 300, 620, 1300, 620, 1300, 250, 1640, 250},
+    {-40, 160, 1420, 160, 1420, 420, 200, 420, 200, 680, 1420, 680, 1420, 860, 1640, 860},
+    {-40, 820, 1450, 820, 1450, 140, 150, 140, 150, 600, 1150, 600, 1150, 370, 520, 370}
+  };
+  TD_ENEMIGOS = new float[][] {
+    {42, 1.4, 5, 1, 0, 16},
+    {20, 2.4, 3, 1, 0, 12},
+    {126, 1.0, 9, 2, 0, 20},
+    {196, 0.9, 14, 2, 4, 22},
+    {154, 1.2, 11, 2, 0, 20},
+    {3080, 0.55, 108, 15, 4, 40}
+  };
+}
+
+// Columnas de cada enemigo vivo (tdEne): posición, vida, velocidad y su estado
+final int E_X = 0, E_Y = 1, E_HP = 2, E_VEL = 3, E_TIPO = 4, E_AVANCE = 5, E_VIVO = 6, E_ATURDIDO = 7;
+final int E_QUEMA = 8, E_QUEMA_T = 9, E_HPMAX = 10, E_GOLPE = 11, E_DIR = 12;   // E_DIR: 1 va a la derecha, -1 a la izquierda
+float[][] tdEne = new float[TD_MAX_ENE][13];
+
+// ---- Torres ----
+// 0 Reportar (flechas): un objetivo, rápida.        Ramas: A Ráfaga (varios a la vez) · B Certero (crítico, ignora armadura)
+// 1 Baneo (eléctrica): rayo que salta entre varios.  Ramas: A Tormenta (más saltos, sin perder daño) · B Suspensión (aturde)
+// 2 Bomba de reportes: daño en área, lenta.          Ramas: A Racimo (minibombas) · B Fuego (deja el suelo ardiendo)
+// 3 Firewall: un muro de fuego en el camino que detiene y amontona a los enemigos (no dispara).
+//                                                     Ramas: A Muralla (más vida y empuja hacia atrás) · B Infierno (quema fuerte alrededor)
+// Niveles 1 a 4 suben los números; al pasar al 5 se escoge rama (A o B); el 6 es el máximo.
+String[] TD_TORRE_NOMBRE = {"Reportar", "Baneo", "Bomba de reportes", "Firewall"};
+String[] TD_TORRE_TEXTO = {"Flecha a un enemigo.\nRápida y barata.", "Rayo que salta a 3\nenemigos cercanos.", "Explota en un área.\nLenta pero fuerte.", "Muro de fuego en el\ncamino: los detiene."};
+int[] TD_TORRE_COSTO = {60, 90, 120, 100};
+// { daño, alcance, recarga en cuadros }  (el Firewall usa daño = vida del muro)
+float[][] TD_TORRE_BASE = {
+  {10, 170, 32},
+  {14, 150, 55},
+  {32, 200, 110},
+  {400, 170, 0}
+};
+final int TD_NIVEL_MAX = 6;
+// [torre * 2 + rama]
+String[] TD_RAMA_NOMBRE = {"Ráfaga", "Certero", "Tormenta", "Suspensión", "Racimo", "Fuego", "Muralla", "Infierno"};
+String[] TD_RAMA_TEXTO = {
+  "Dispara a 3 enemigos a la vez\n(5 en nivel 6).",
+  "Ignora armadura. Cada 4.º disparo\nhace triple daño (cada 3.º en nivel 6).",
+  "El rayo salta a 6 (9 en nivel 6)\ny no pierde daño.",
+  "Cada golpe aturde 0,4 s\n(0,7 s en nivel 6).",
+  "La explosión suelta 3 minibombas\n(5 en nivel 6).",
+  "Deja el suelo ardiendo 3 s\n(más fuerte en nivel 6).",
+  "El muro aguanta el doble y cada 4 s\nempuja a todos hacia atrás.",
+  "Quema fuerte a todo lo que esté\ncerca del muro."
+};
+
+// Estado de cada lugar (índice = lugar del nivel)
+int[] tdTorTipo = new int[TD_MAX_LUGARES];       // -1 = vacío
+int[] tdTorNivel = new int[TD_MAX_LUGARES];
+int[] tdTorRama = new int[TD_MAX_LUGARES];       // -1 sin rama, 0 = A, 1 = B
+int[] tdTorCarga = new int[TD_MAX_LUGARES];      // cuadros que faltan para disparar
+int[] tdTorGastado = new int[TD_MAX_LUGARES];    // karma invertido (para vender)
+int[] tdTorDisparos = new int[TD_MAX_LUGARES];   // cuenta de disparos (crítico de Certero)
+float[] tdTorAngulo = new float[TD_MAX_LUGARES];
+// El muro del Firewall
+float[] tdMuroAvance = new float[TD_MAX_LUGARES];
+float[] tdMuroX = new float[TD_MAX_LUGARES];
+float[] tdMuroY = new float[TD_MAX_LUGARES];
+float[] tdMuroHP = new float[TD_MAX_LUGARES];
+int[] tdMuroCaido = new int[TD_MAX_LUGARES];     // cuadros para levantarse otra vez
+int[] tdMuroEmpuje = new int[TD_MAX_LUGARES];
+
+// Proyectiles: { x, y, enemigo objetivo, destino x, destino y, tipo (0 flecha, 1 bomba, 2 minibomba), daño, lugar que disparó, vivo, ángulo }
+final int P_X = 0, P_Y = 1, P_OBJ = 2, P_DX = 3, P_DY = 4, P_TIPO = 5, P_DANIO = 6, P_LUGAR = 7, P_VIVO = 8, P_ANG = 9;
+float[][] tdProy = new float[TD_MAX_PROY][10];
+// Efectos visuales: { x, y, x2, y2, tipo (0 explosión, 1 rayo, 2 golpe), vida, vida máxima, radio }
+float[][] tdEfe = new float[TD_MAX_EFE][8];
+// Suelo ardiendo: { x, y, radio, daño por segundo, cuadros que le quedan }
+float[][] tdFuego = new float[TD_MAX_FUEGO][5];
+
+// El camino del nivel actual (se arma al empezar)
+float[] tdCamX = new float[16];
+float[] tdCamY = new float[16];
+float[] tdCamLargo = new float[16];   // distancia acumulada hasta cada punto
+int tdCamN = 0;
+float tdCamTotal = 0;
+float resTdX, resTdY;
+
+// Olas del nivel actual
+int[] tdOlaPos = new int[20];         // posición del -1 de cada ola en la fila del nivel
+int tdOlas = 0;
+int tdOla = -1;                       // ola actual (-1 = antes de empezar)
+int tdOlaCuadros = 0, tdOlaDuracion = 0;
+int tdSpawnPar = 0, tdSpawnQuedan = 0, tdSpawnCada = 30, tdSpawnTimer = 0;
+boolean tdTodosSalieron = false;
+
+// Partida
+int tdPantalla = 0;                   // 0 menú de niveles, 1 jugando, 2 ganaste, 3 perdiste
+int tdNivel = 0;
+int tdNumLugares = 0;
+int tdVidas = TD_VIDAS;
+int tdKarma = 0;
+boolean tdPausa = false;
+int tdVel = 1;
+int tdSel = -1;                       // lugar seleccionado (-1 = ninguno)
+int tdDesde = 0;                      // millis() al entrar (lo corre desplazarTiempos)
+int tdGanadosNuevos = 0, tdGanadosRepetidos = 0;
+int tdCuadro = 0;
+
+// Sprites
+PImage[] tdImgMapa = new PImage[TD_N];
+PImage tdImgMenu, tdImgLugar, tdImgTorres, tdImgEnemigos, tdImgProy, tdImgExplosion, tdImgFuego, tdImgMuro, tdImgFeed, tdImgRamas, tdImgIconos;
+boolean tdSpritesBuscados = false;
+
+
+// ---------------------------------------------------------------------
+//  Entrar y salir
+// ---------------------------------------------------------------------
+
+// Lo llama la opción 4 de las máquinas de PixelZone.
+void iniciarModerador() {
+  if (TD_NIVELES == null) datos_TD();
+  tdCargarSprites();
+  teclaIzq = false;
+  teclaDer = false;
+  cel = 0;
+  tdDesde = millis();
+  tdGanadosNuevos = 0;
+  tdGanadosRepetidos = 0;
+  tdRevisarDesbloqueos();
+  tdPantalla = 0;
+  screen = 5;
+  cargado = 0;
+}
+
+// Carga los sprites una sola vez (los que no estén quedan en null).
+void tdCargarSprites() {
+  if (tdSpritesBuscados) return;
+  tdSpritesBuscados = true;
+  String r = "minijuegos/moderador/";
+  for (int k = 0; k < TD_N; k++) tdImgMapa[k] = cargarSiExiste(r + "mapa_" + (k + 1) + ".png");
+  tdImgMenu = cargarSiExiste(r + "menu_niveles.png");
+  tdImgLugar = cargarSiExiste(r + "lugar.png");
+  tdImgTorres = cargarSiExiste(r + "torres.png");
+  tdImgEnemigos = cargarSiExiste(r + "enemigos.png");
+  tdImgProy = cargarSiExiste(r + "proyectiles.png");
+  tdImgExplosion = cargarSiExiste(r + "explosion.png");
+  tdImgFuego = cargarSiExiste(r + "fuego_suelo.png");
+  tdImgMuro = cargarSiExiste(r + "muro_fuego.png");
+  tdImgFeed = cargarSiExiste(r + "feed.png");
+  tdImgRamas = cargarSiExiste(r + "ramas.png");
+  tdImgIconos = cargarSiExiste(r + "iconos.png");
+}
+
+// La columna [0] de cada nivel: el 1 siempre; los demás si ya ganaste el anterior (queda en banderas).
+void tdRevisarDesbloqueos() {
+  for (int k = 0; k < TD_N; k++) {
+    if (k == 0 || bandera("TD_GANO_" + (k - 1)) > 0) TD_NIVELES[k][0] = 1; else TD_NIVELES[k][0] = 0;
+  }
+}
+
+// Vuelve a PixelZone: corre el reloj, suma el tiempo jugado y da los stats.
+void salirModerador() {
+  int quieto = millis() - tdDesde;
+  tdDesde = 0;
+  desplazarTiempos(quieto);
+  avanzarTiempo(min(120, 10 + quieto / 20000));
+  String ef = "";
+  if (tdGanadosNuevos > 0) ef = "Seg +" + (3 * tdGanadosNuevos) + " · Social +" + tdGanadosNuevos;
+  if (tdGanadosRepetidos > 0) {
+    if (!ef.equals("")) ef = ef + " · ";
+    ef = ef + "Energía +2";
+  }
+  String r = "";
+  if (!ef.equals("")) r = aplicarEfectos(ef, -1);
+  if (r.equals("")) aviso("Sales de la máquina del Moderador."); else aviso("Sales de la máquina del Moderador.  (" + r + ")");
+  screen = 1;
+  cargado = 0;
+}
+
+
+// ---------------------------------------------------------------------
+//  Empezar un nivel: arma el camino, las olas y limpia todo
+// ---------------------------------------------------------------------
+void tdEmpezarNivel(int n) {
+  tdNivel = n;
+  int[] fila = TD_NIVELES[n];
+  tdNumLugares = fila[2];
+  for (int k = 0; k < TD_MAX_LUGARES; k++) {
+    tdTorTipo[k] = -1;
+    tdTorNivel[k] = 0;
+    tdTorRama[k] = -1;
+    tdTorGastado[k] = 0;
+    tdMuroHP[k] = 0;
+  }
+  for (int k = 0; k < TD_MAX_ENE; k++) tdEne[k][E_VIVO] = 0;
+  for (int k = 0; k < TD_MAX_PROY; k++) tdProy[k][P_VIVO] = 0;
+  for (int k = 0; k < TD_MAX_EFE; k++) tdEfe[k][5] = 0;
+  for (int k = 0; k < TD_MAX_FUEGO; k++) tdFuego[k][4] = 0;
+  // camino
+  int[] c = TD_CAMINOS[n];
+  tdCamN = c.length / 2;
+  tdCamTotal = 0;
+  for (int k = 0; k < tdCamN; k++) {
+    tdCamX[k] = c[2 * k];
+    tdCamY[k] = c[2 * k + 1];
+    if (k > 0) tdCamTotal = tdCamTotal + dist(tdCamX[k - 1], tdCamY[k - 1], tdCamX[k], tdCamY[k]);
+    tdCamLargo[k] = tdCamTotal;
+  }
+  // olas: dónde empieza cada una (los -1 después de los lugares)
+  tdOlas = 0;
+  for (int i = 3 + 2 * tdNumLugares; i < fila.length; i++) {
+    if (fila[i] == -1 && tdOlas < tdOlaPos.length) {
+      tdOlaPos[tdOlas] = i;
+      tdOlas++;
+    }
+  }
+  tdOla = -1;
+  tdTodosSalieron = true;
+  tdVidas = TD_VIDAS;
+  tdKarma = TD_KARMA_INICIAL[n];
+  tdPausa = false;
+  tdVel = 1;
+  tdSel = -1;
+  tdCuadro = 0;
+  tdPantalla = 1;
+}
+
+// x, y de un lugar para torre
+float tdLugarX(int k) {
+  return TD_NIVELES[tdNivel][3 + 2 * k];
+}
+float tdLugarY(int k) {
+  return TD_NIVELES[tdNivel][4 + 2 * k];
+}
+
+// Punto del camino a una distancia "avance" del origen. Queda en resTdX, resTdY.
+void tdPosicion(float avance) {
+  if (avance <= 0) { resTdX = tdCamX[0]; resTdY = tdCamY[0]; return; }
+  for (int k = 1; k < tdCamN; k++) {
+    if (avance <= tdCamLargo[k]) {
+      float tramo = tdCamLargo[k] - tdCamLargo[k - 1];
+      float t = (avance - tdCamLargo[k - 1]) / max(1, tramo);
+      resTdX = lerp(tdCamX[k - 1], tdCamX[k], t);
+      resTdY = lerp(tdCamY[k - 1], tdCamY[k], t);
+      return;
+    }
+  }
+  resTdX = tdCamX[tdCamN - 1];
+  resTdY = tdCamY[tdCamN - 1];
+}
+
+// Avance (distancia por el camino) del punto del camino más cercano a (x, y). Revisa cada tramo.
+float tdAvanceMasCercano(float x, float y) {
+  float mejor = 0, mejorD = 999999;
+  for (int k = 1; k < tdCamN; k++) {
+    float ax = tdCamX[k - 1], ay = tdCamY[k - 1], bx = tdCamX[k], by = tdCamY[k];
+    float l2 = sq(bx - ax) + sq(by - ay);
+    float t = 0;
+    if (l2 > 0) t = constrain(((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / l2, 0, 1);
+    float px = ax + t * (bx - ax), py = ay + t * (by - ay);
+    float d = dist(x, y, px, py);
+    // no pone el muro fuera de la pantalla
+    if (d < mejorD && px > 20 && px < ANCHO - 20 && py > TD_HUD + 10 && py < ALTO - 10) {
+      mejorD = d;
+      mejor = tdCamLargo[k - 1] + t * sqrt(l2);
+    }
+  }
+  return mejor;
+}
+
+
+// ---------------------------------------------------------------------
+//  Olas
+// ---------------------------------------------------------------------
+
+// Empieza la ola o (lee sus segundos y cuántos enemigos trae para repartir la salida).
+void tdEmpezarOla(int o) {
+  tdOla = o;
+  int[] fila = TD_NIVELES[tdNivel];
+  int i = tdOlaPos[o];
+  tdOlaDuracion = fila[i + 1] * 60;
+  tdOlaCuadros = 0;
+  int total = 0;
+  int j = i + 2;
+  while (j + 1 < fila.length && fila[j] != -1) {
+    total = total + fila[j];
+    j = j + 2;
+  }
+  tdSpawnCada = max(10, int(tdOlaDuracion * 0.65 / max(1, total)));
+  tdSpawnPar = i + 2;
+  tdSpawnQuedan = 0;
+  if (tdSpawnPar + 1 < fila.length && fila[tdSpawnPar] != -1) tdSpawnQuedan = fila[tdSpawnPar];
+  tdSpawnTimer = 0;
+  tdTodosSalieron = false;
+}
+
+// Cada cuadro de la ola: saca el siguiente enemigo cuando toca.
+void tdAvanzarOla() {
+  if (tdOla < 0) return;
+  tdOlaCuadros++;
+  if (!tdTodosSalieron) {
+    tdSpawnTimer--;
+    if (tdSpawnTimer <= 0) {
+      int[] fila = TD_NIVELES[tdNivel];
+      tdCrearEnemigo(fila[tdSpawnPar + 1], 0);
+      tdSpawnTimer = tdSpawnCada;
+      tdSpawnQuedan--;
+      if (tdSpawnQuedan <= 0) {
+        tdSpawnPar = tdSpawnPar + 2;
+        if (tdSpawnPar + 1 < fila.length && fila[tdSpawnPar] != -1) tdSpawnQuedan = fila[tdSpawnPar];
+        else tdTodosSalieron = true;
+      }
+    }
+  }
+  // se acabó el tiempo: empieza la siguiente sola
+  if (tdOlaCuadros >= tdOlaDuracion && tdOla + 1 < tdOlas) tdEmpezarOla(tdOla + 1);
+}
+
+// Botón de siguiente ola: solo cuando ya salieron todos. El tiempo que te saltas da karma.
+void tdSaltarOla() {
+  if (tdOla + 1 >= tdOlas) return;
+  if (tdOla >= 0) {
+    if (!tdTodosSalieron) return;
+    tdKarma = tdKarma + max(0, (tdOlaDuracion - tdOlaCuadros) / 60);
+  }
+  tdEmpezarOla(tdOla + 1);
+}
+
+// ¿Ya salieron todas las olas y no queda nadie?
+boolean tdNivelLimpio() {
+  if (tdOla < tdOlas - 1 || !tdTodosSalieron) return false;
+  for (int k = 0; k < TD_MAX_ENE; k++) if (tdEne[k][E_VIVO] == 1) return false;
+  return true;
+}
+
+// Mete un enemigo del tipo t en el camino, a la distancia "avance".
+void tdCrearEnemigo(int t, float avance) {
+  for (int k = 0; k < TD_MAX_ENE; k++) {
+    if (tdEne[k][E_VIVO] == 0) {
+      tdEne[k][E_TIPO] = t;
+      tdEne[k][E_HP] = TD_ENEMIGOS[t][0] * (1 + 0.04 * max(0, tdOla));
+      tdEne[k][E_HPMAX] = tdEne[k][E_HP];
+      tdEne[k][E_VEL] = TD_ENEMIGOS[t][1];
+      tdEne[k][E_AVANCE] = avance;
+      tdEne[k][E_VIVO] = 1;
+      tdEne[k][E_ATURDIDO] = 0;
+      tdEne[k][E_QUEMA] = 0;
+      tdEne[k][E_QUEMA_T] = 0;
+      tdEne[k][E_GOLPE] = 0;
+      tdEne[k][E_DIR] = 1;
+      tdPosicion(avance);
+      tdEne[k][E_X] = resTdX;
+      tdEne[k][E_Y] = resTdY;
+      return;
+    }
+  }
+}
+
+
+// ---------------------------------------------------------------------
+//  Números de cada torre según su nivel y rama
+// ---------------------------------------------------------------------
+float tdDanio(int s) {
+  int t = tdTorTipo[s];
+  float d = TD_TORRE_BASE[t][0] * (1 + 0.35 * (tdTorNivel[s] - 1));
+  if (t == 3 && tdTorRama[s] == 0) d = d * (1 + tdTorNivel[s] - 4);   // Muralla: x2 en nivel 5, x3 en nivel 6
+  return d;
+}
+float tdAlcance(int s) {
+  return TD_TORRE_BASE[tdTorTipo[s]][1] + 12 * (tdTorNivel[s] - 1);
+}
+int tdRecarga(int s) {
+  return max(8, int(TD_TORRE_BASE[tdTorTipo[s]][2] * (1 - 0.06 * (tdTorNivel[s] - 1))));
+}
+// Cuánto cuesta subir del nivel actual al siguiente
+int tdCostoMejora(int s) {
+  return TD_TORRE_COSTO[tdTorTipo[s]] * (tdTorNivel[s] + 1) / 2;
+}
+// Rama A/B con nivel 6 (el más fuerte)
+boolean tdRamaFuerte(int s) {
+  return tdTorNivel[s] >= 6;
+}
+
+
+// ---------------------------------------------------------------------
+//  Un paso de la simulación (1/60 s). Se llama pasoCuadro * tdVel veces por cuadro.
+// ---------------------------------------------------------------------
+void tdPaso() {
+  tdCuadro++;
+  tdAvanzarOla();
+  tdMoverEnemigos();
+  tdActualizarMuros();
+  tdActualizarFuegos();
+  tdDispararTorres();
+  tdMoverProyectiles();
+  for (int k = 0; k < TD_MAX_EFE; k++) if (tdEfe[k][5] > 0) tdEfe[k][5]--;
+  if (tdVidas <= 0) {
+    tdVidas = 0;
+    tdPantalla = 3;
+  } else if (tdNivelLimpio()) {
+    tdGanarNivel();
+  }
+}
+
+// Gana el nivel: lo marca en banderas (así desbloquea el siguiente y queda guardado).
+void tdGanarNivel() {
+  tdPantalla = 2;
+  if (bandera("TD_GANO_" + tdNivel) > 0) {
+    tdGanadosRepetidos++;
+  } else {
+    tdGanadosNuevos++;
+    sumarBandera("TD_GANO_" + tdNivel, 1);
+  }
+  tdRevisarDesbloqueos();
+}
+
+// Mueve cada enemigo por el camino. Se frena si está aturdido o si hay un muro delante.
+void tdMoverEnemigos() {
+  for (int k = 0; k < TD_MAX_ENE; k++) {
+    if (tdEne[k][E_VIVO] == 1) {
+      int t = int(tdEne[k][E_TIPO]);
+      if (tdEne[k][E_GOLPE] > 0) tdEne[k][E_GOLPE]--;
+      // quemadura
+      if (tdEne[k][E_QUEMA_T] > 0) {
+        tdEne[k][E_QUEMA_T]--;
+        tdEne[k][E_HP] = tdEne[k][E_HP] - tdEne[k][E_QUEMA] / 60.0;
+        if (tdEne[k][E_HP] <= 0) tdMatar(k);
+      }
+      if (tdEne[k][E_VIVO] == 1) {
+        if (tdEne[k][E_ATURDIDO] > 0) {
+          tdEne[k][E_ATURDIDO]--;
+        } else {
+          float av = tdEne[k][E_AVANCE];
+          float nuevo = av + tdEne[k][E_VEL];
+          // muros de Firewall que estén delante
+          for (int s = 0; s < tdNumLugares; s++) {
+            if (tdTorTipo[s] == 3 && tdMuroCaido[s] == 0 && tdMuroHP[s] > 0) {
+              float tope = tdMuroAvance[s] - 18 - TD_ENEMIGOS[t][5] * 0.5;
+              if (av <= tope + 1 && nuevo > tope) {
+                nuevo = max(av, tope);
+                tdMuroHP[s] = tdMuroHP[s] - TD_ENEMIGOS[t][3] * 0.15;
+                // el fuego del muro quema un poco a los que detiene
+                tdQuemar(k, 4 + 2 * tdTorNivel[s], 20);
+              }
+            }
+          }
+          tdEne[k][E_AVANCE] = nuevo;
+        }
+        if (tdEne[k][E_AVANCE] >= tdCamTotal) {
+          tdVidas = tdVidas - int(TD_ENEMIGOS[t][3]);
+          tdEne[k][E_VIVO] = 0;
+        } else {
+          tdPosicion(tdEne[k][E_AVANCE]);
+          if (resTdX < tdEne[k][E_X] - 0.01) tdEne[k][E_DIR] = -1;
+          if (resTdX > tdEne[k][E_X] + 0.01) tdEne[k][E_DIR] = 1;
+          tdEne[k][E_X] = resTdX;
+          tdEne[k][E_Y] = resTdY;
+        }
+      }
+    }
+  }
+}
+
+// Le pone (o le refresca) una quemadura de dps puntos por segundo durante "cuadros".
+void tdQuemar(int k, float dps, int cuadros) {
+  if (dps >= tdEne[k][E_QUEMA] || tdEne[k][E_QUEMA_T] <= 0) tdEne[k][E_QUEMA] = dps;
+  if (tdEne[k][E_QUEMA_T] < cuadros) tdEne[k][E_QUEMA_T] = cuadros;
+}
+
+// Le hace daño a un enemigo (le resta la armadura salvo que la ignore). Si queda en 0, muere.
+void tdGolpear(int k, float danio, boolean ignoraArmadura) {
+  if (tdEne[k][E_VIVO] != 1) return;
+  float real = danio;
+  if (!ignoraArmadura) real = max(1, danio - TD_ENEMIGOS[int(tdEne[k][E_TIPO])][4]);
+  tdEne[k][E_HP] = tdEne[k][E_HP] - real;
+  tdEne[k][E_GOLPE] = 6;
+  if (tdEne[k][E_HP] <= 0) tdMatar(k);
+}
+
+// Muere un enemigo: da karma. El virus se parte en 3 bots.
+void tdMatar(int k) {
+  if (tdEne[k][E_VIVO] != 1) return;
+  tdEne[k][E_VIVO] = 0;
+  int t = int(tdEne[k][E_TIPO]);
+  tdKarma = tdKarma + int(TD_ENEMIGOS[t][2]);
+  tdEfecto(tdEne[k][E_X], tdEne[k][E_Y], 0, 0, 2, 14, TD_ENEMIGOS[t][5] * 1.6);
+  if (t == TD_VIRUS) {
+    float av = tdEne[k][E_AVANCE];
+    for (int i = 0; i < 3; i++) tdCrearEnemigo(TD_BOT, max(0, av - 14 * i));
+  }
+}
+
+// Aturde (el jefe la mitad del tiempo).
+void tdAturdir(int k, int cuadros) {
+  if (int(tdEne[k][E_TIPO]) == TD_JEFE) cuadros = cuadros / 2;
+  if (tdEne[k][E_ATURDIDO] < cuadros) tdEne[k][E_ATURDIDO] = cuadros;
+}
+
+// Muros: se levantan otra vez cuando caen; la Muralla empuja y el Infierno quema alrededor.
+void tdActualizarMuros() {
+  for (int s = 0; s < tdNumLugares; s++) {
+    if (tdTorTipo[s] == 3) {
+      if (tdMuroCaido[s] > 0) {
+        tdMuroCaido[s]--;
+        if (tdMuroCaido[s] == 0) tdMuroHP[s] = tdDanio(s);
+      } else if (tdMuroHP[s] <= 0) {
+        tdMuroCaido[s] = 300;
+        tdEfecto(tdMuroX[s], tdMuroY[s], 0, 0, 0, 20, 60);
+      } else {
+        if (tdTorRama[s] == 0) {
+          tdMuroEmpuje[s]--;
+          if (tdMuroEmpuje[s] <= 0) {
+            tdMuroEmpuje[s] = 240;
+            for (int k = 0; k < TD_MAX_ENE; k++) {
+              if (tdEne[k][E_VIVO] == 1 && int(tdEne[k][E_TIPO]) != TD_JEFE && tdEne[k][E_AVANCE] > tdMuroAvance[s] - 80 && tdEne[k][E_AVANCE] < tdMuroAvance[s]) {
+                tdEne[k][E_AVANCE] = max(0, tdEne[k][E_AVANCE] - 45);
+              }
+            }
+            tdEfecto(tdMuroX[s], tdMuroY[s], 0, 0, 2, 16, 90);
+          }
+        }
+        if (tdTorRama[s] == 1) {
+          float dps = 20;
+          if (tdRamaFuerte(s)) dps = 35;
+          for (int k = 0; k < TD_MAX_ENE; k++) {
+            if (tdEne[k][E_VIVO] == 1 && dist(tdEne[k][E_X], tdEne[k][E_Y], tdMuroX[s], tdMuroY[s]) < 75) tdQuemar(k, dps, 20);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Suelo ardiendo (rama Fuego de la bomba): quema a los que pasan por encima.
+void tdActualizarFuegos() {
+  for (int f = 0; f < TD_MAX_FUEGO; f++) {
+    if (tdFuego[f][4] > 0) {
+      tdFuego[f][4]--;
+      if (tdCuadro % 10 == 0) {
+        for (int k = 0; k < TD_MAX_ENE; k++) {
+          if (tdEne[k][E_VIVO] == 1 && dist(tdEne[k][E_X], tdEne[k][E_Y], tdFuego[f][0], tdFuego[f][1]) < tdFuego[f][2]) tdQuemar(k, tdFuego[f][3], 30);
+        }
+      }
+    }
+  }
+}
+
+// El enemigo vivo más adelantado dentro del alcance de la torre s que no esté en "saltar" (-1 = ninguno).
+int tdObjetivo(int s, float alcance, int[] saltar, int nSaltar) {
+  float x = tdLugarX(s), y = tdLugarY(s);
+  int mejor = -1;
+  float mejorAv = -1;
+  for (int k = 0; k < TD_MAX_ENE; k++) {
+    if (tdEne[k][E_VIVO] == 1 && tdEne[k][E_AVANCE] > mejorAv && dist(x, y, tdEne[k][E_X], tdEne[k][E_Y]) <= alcance) {
+      boolean ya = false;
+      for (int i = 0; i < nSaltar; i++) if (saltar[i] == k) ya = true;
+      if (!ya) {
+        mejor = k;
+        mejorAv = tdEne[k][E_AVANCE];
+      }
+    }
+  }
+  return mejor;
+}
+
+// Cada torre: si ya recargó y tiene a alguien en alcance, dispara.
+void tdDispararTorres() {
+  int[] elegidos = new int[6];
+  for (int s = 0; s < tdNumLugares; s++) {
+    int t = tdTorTipo[s];
+    if (t >= 0 && t != 3) {
+      if (tdTorCarga[s] > 0) tdTorCarga[s]--;
+      if (tdTorCarga[s] <= 0) {
+        int obj = tdObjetivo(s, tdAlcance(s), elegidos, 0);
+        if (obj >= 0) {
+          tdTorCarga[s] = tdRecarga(s);
+          tdTorDisparos[s]++;
+          tdTorAngulo[s] = atan2(tdEne[obj][E_Y] - tdLugarY(s), tdEne[obj][E_X] - tdLugarX(s));
+          if (t == 0) tdDispararFlechas(s, obj, elegidos);
+          else if (t == 1) tdRayo(s, obj);
+          else tdLanzarProy(s, 1, tdEne[obj][E_X], tdEne[obj][E_Y], obj, tdDanio(s), tdLugarX(s), tdLugarY(s));
+        }
+      }
+    }
+  }
+}
+
+// Reportar: una flecha (o varias con Ráfaga). Certero: crítico cada 4 (o 3) disparos.
+void tdDispararFlechas(int s, int primero, int[] elegidos) {
+  float d = tdDanio(s);
+  int cuantos = 1;
+  if (tdTorRama[s] == 0) {
+    cuantos = 3;
+    if (tdRamaFuerte(s)) cuantos = 5;
+  }
+  if (tdTorRama[s] == 1) {
+    int cada = 4;
+    if (tdRamaFuerte(s)) cada = 3;
+    if (tdTorDisparos[s] % cada == 0) d = d * 3;
+  }
+  elegidos[0] = primero;
+  int n = 1;
+  boolean buscar = true;
+  while (buscar && n < cuantos) {
+    int otro = tdObjetivo(s, tdAlcance(s), elegidos, n);
+    if (otro < 0) buscar = false; else { elegidos[n] = otro; n++; }
+  }
+  for (int i = 0; i < n; i++) {
+    tdLanzarProy(s, 0, tdEne[elegidos[i]][E_X], tdEne[elegidos[i]][E_Y], elegidos[i], d, tdLugarX(s), tdLugarY(s));
+  }
+}
+
+// Baneo: rayo instantáneo que salta al enemigo más cercano que no haya tocado.
+void tdRayo(int s, int primero) {
+  int saltos = 3;
+  float perdida = 0.8;
+  if (tdTorRama[s] == 0) {
+    saltos = 6;
+    if (tdRamaFuerte(s)) saltos = 9;
+    perdida = 1;
+  }
+  int aturde = 0;
+  if (tdTorRama[s] == 1) {
+    aturde = 24;
+    if (tdRamaFuerte(s)) aturde = 42;
+  }
+  int[] tocados = new int[10];
+  int n = 0;
+  float d = tdDanio(s);
+  float px = tdLugarX(s), py = tdLugarY(s) - 30;
+  int actual = primero;
+  while (actual >= 0 && n < saltos) {
+    float ex = tdEne[actual][E_X], ey = tdEne[actual][E_Y];
+    tdEfecto(px, py, ex, ey, 1, 10, 0);
+    tocados[n] = actual;
+    n++;
+    if (aturde > 0) tdAturdir(actual, aturde);
+    tdGolpear(actual, d, false);
+    d = d * perdida;
+    px = ex;
+    py = ey;
+    // siguiente: el más cercano a menos de 110 px que no haya tocado
+    int sig = -1;
+    float mejorD = 110;
+    for (int k = 0; k < TD_MAX_ENE; k++) {
+      if (tdEne[k][E_VIVO] == 1) {
+        boolean ya = false;
+        for (int i = 0; i < n; i++) if (tocados[i] == k) ya = true;
+        float dd = dist(px, py, tdEne[k][E_X], tdEne[k][E_Y]);
+        if (!ya && dd < mejorD) { mejorD = dd; sig = k; }
+      }
+    }
+    actual = sig;
+  }
+}
+
+// Crea un proyectil: tipo 0 flecha (persigue), 1 bomba y 2 minibomba (van a un punto del suelo).
+void tdLanzarProy(int s, int tipo, float dx, float dy, int obj, float danio, float x, float y) {
+  for (int p = 0; p < TD_MAX_PROY; p++) {
+    if (tdProy[p][P_VIVO] == 0) {
+      tdProy[p][P_X] = x;
+      tdProy[p][P_Y] = y - 20;
+      tdProy[p][P_OBJ] = obj;
+      tdProy[p][P_DX] = dx;
+      tdProy[p][P_DY] = dy;
+      tdProy[p][P_TIPO] = tipo;
+      tdProy[p][P_DANIO] = danio;
+      tdProy[p][P_LUGAR] = s;
+      tdProy[p][P_VIVO] = 1;
+      tdProy[p][P_ANG] = 0;
+      return;
+    }
+  }
+}
+
+// Mueve los proyectiles. La flecha sigue a su enemigo; las bombas explotan al llegar al punto.
+void tdMoverProyectiles() {
+  for (int p = 0; p < TD_MAX_PROY; p++) {
+    if (tdProy[p][P_VIVO] == 1) {
+      int tipo = int(tdProy[p][P_TIPO]);
+      int obj = int(tdProy[p][P_OBJ]);
+      if (tipo == 0 && obj >= 0 && tdEne[obj][E_VIVO] == 1) {
+        tdProy[p][P_DX] = tdEne[obj][E_X];
+        tdProy[p][P_DY] = tdEne[obj][E_Y];
+      }
+      float vel = 14;
+      if (tipo == 1) vel = 7;
+      if (tipo == 2) vel = 5;
+      float dx = tdProy[p][P_DX] - tdProy[p][P_X], dy = tdProy[p][P_DY] - tdProy[p][P_Y];
+      float d = sqrt(dx * dx + dy * dy);
+      tdProy[p][P_ANG] = atan2(dy, dx);
+      if (d <= vel) {
+        tdProy[p][P_VIVO] = 0;
+        tdImpacto(p);
+      } else {
+        tdProy[p][P_X] = tdProy[p][P_X] + dx / d * vel;
+        tdProy[p][P_Y] = tdProy[p][P_Y] + dy / d * vel;
+      }
+    }
+  }
+}
+
+// Llega un proyectil: la flecha golpea; la bomba explota (Racimo suelta minibombas, Fuego deja el suelo ardiendo).
+void tdImpacto(int p) {
+  int tipo = int(tdProy[p][P_TIPO]);
+  int s = int(tdProy[p][P_LUGAR]);
+  float x = tdProy[p][P_DX], y = tdProy[p][P_DY];
+  if (tipo == 0) {
+    int obj = int(tdProy[p][P_OBJ]);
+    if (obj >= 0 && tdEne[obj][E_VIVO] == 1) tdGolpear(obj, tdProy[p][P_DANIO], tdTorRama[s] == 1);
+    return;
+  }
+  float radio = 75;
+  if (tipo == 2) radio = 45;
+  for (int k = 0; k < TD_MAX_ENE; k++) {
+    if (tdEne[k][E_VIVO] == 1 && dist(x, y, tdEne[k][E_X], tdEne[k][E_Y]) < radio + TD_ENEMIGOS[int(tdEne[k][E_TIPO])][5] * 0.5) tdGolpear(k, tdProy[p][P_DANIO], false);
+  }
+  tdEfecto(x, y, 0, 0, 0, 18, radio * 2);
+  if (tipo == 1 && tdTorTipo[s] == 2 && tdTorRama[s] == 0) {
+    int n = 3;
+    if (tdRamaFuerte(s)) n = 5;
+    for (int i = 0; i < n; i++) {
+      float a = TWO_PI * i / n + random(-0.3, 0.3);
+      float r = random(50, 75);
+      tdLanzarProy(s, 2, x + cos(a) * r, y + sin(a) * r, -1, tdProy[p][P_DANIO] * 0.4, x, y + 20);
+    }
+  }
+  if (tipo == 1 && tdTorTipo[s] == 2 && tdTorRama[s] == 1) {
+    float dps = 8;
+    if (tdRamaFuerte(s)) dps = 14;
+    for (int f = 0; f < TD_MAX_FUEGO; f++) {
+      if (tdFuego[f][4] <= 0) {
+        tdFuego[f][0] = x;
+        tdFuego[f][1] = y;
+        tdFuego[f][2] = 65;
+        tdFuego[f][3] = dps;
+        tdFuego[f][4] = 180;
+        f = TD_MAX_FUEGO;
+      }
+    }
+  }
+}
+
+// Agrega un efecto visual (explosión, rayo o golpe).
+void tdEfecto(float x, float y, float x2, float y2, int tipo, int vida, float radio) {
+  for (int k = 0; k < TD_MAX_EFE; k++) {
+    if (tdEfe[k][5] <= 0) {
+      tdEfe[k][0] = x;
+      tdEfe[k][1] = y;
+      tdEfe[k][2] = x2;
+      tdEfe[k][3] = y2;
+      tdEfe[k][4] = tipo;
+      tdEfe[k][5] = vida;
+      tdEfe[k][6] = vida;
+      tdEfe[k][7] = radio;
+      return;
+    }
+  }
+}
+
+
+// ---------------------------------------------------------------------
+//  Construir, mejorar y vender
+// ---------------------------------------------------------------------
+void tdConstruir(int s, int t) {
+  if (tdTorTipo[s] >= 0 || tdKarma < TD_TORRE_COSTO[t]) return;
+  tdKarma = tdKarma - TD_TORRE_COSTO[t];
+  tdTorTipo[s] = t;
+  tdTorNivel[s] = 1;
+  tdTorRama[s] = -1;
+  tdTorCarga[s] = 0;
+  tdTorDisparos[s] = 0;
+  tdTorGastado[s] = TD_TORRE_COSTO[t];
+  tdTorAngulo[s] = 0;
+  if (t == 3) {
+    // el muro va en el punto del camino más cercano a la torre
+    tdMuroAvance[s] = tdAvanceMasCercano(tdLugarX(s), tdLugarY(s));
+    tdPosicion(tdMuroAvance[s]);
+    tdMuroX[s] = resTdX;
+    tdMuroY[s] = resTdY;
+    tdMuroHP[s] = tdDanio(s);
+    tdMuroCaido[s] = 0;
+    tdMuroEmpuje[s] = 240;
+  }
+}
+
+// Sube un nivel. Del 4 al 5 hay que escoger rama (0 = A, 1 = B); después se queda en esa.
+void tdMejorar(int s, int rama) {
+  if (tdTorTipo[s] < 0 || tdTorNivel[s] >= TD_NIVEL_MAX) return;
+  int costo = tdCostoMejora(s);
+  if (tdKarma < costo) return;
+  if (tdTorNivel[s] == 4) {
+    if (rama < 0) return;
+    tdTorRama[s] = rama;
+  }
+  tdKarma = tdKarma - costo;
+  tdTorGastado[s] = tdTorGastado[s] + costo;
+  tdTorNivel[s]++;
+  if (tdTorTipo[s] == 3) tdMuroHP[s] = tdDanio(s);
+}
+
+// Vende la torre: devuelve el 70 % de lo invertido.
+void tdVender(int s) {
+  if (tdTorTipo[s] < 0) return;
+  tdKarma = tdKarma + tdTorGastado[s] * 7 / 10;
+  tdTorTipo[s] = -1;
+  tdTorNivel[s] = 0;
+  tdTorRama[s] = -1;
+  tdTorGastado[s] = 0;
+  tdMuroHP[s] = 0;
+  tdSel = -1;
+}
+
+
+// ---------------------------------------------------------------------
+//  Cada cuadro: corre la simulación (si está jugando y no está en pausa)
+// ---------------------------------------------------------------------
+void actualizarModerador() {
+  if (tdPantalla != 1 || tdPausa) return;
+  int pasos = pasoCuadro * tdVel;
+  for (int i = 0; i < pasos; i++) {
+    if (tdPantalla == 1) tdPaso();
+  }
+}
+
+// Teclas: ESPACIO pausa, N siguiente ola.
+void teclaModerador() {
+  if (tdPantalla != 1) return;
+  if (key == ' ') tdPausa = !tdPausa;
+  if (key == 'n' || key == 'N') tdSaltarOla();
+}
+
+
+// ---------------------------------------------------------------------
+//  Dibujo
+// ---------------------------------------------------------------------
+void dibujarModerador() {
+  if (tdPantalla == 0) { tdDibujarMenu(); return; }
+  tdDibujarMapa();
+  tdDibujarLugares();
+  tdDibujarFuegos();
+  tdDibujarMuros();
+  tdDibujarEnemigos();
+  tdDibujarTorres();
+  tdDibujarProyectiles();
+  tdDibujarEfectos();
+  tdDibujarHUD();
+  if (tdSel >= 0 && tdPantalla == 1) tdDibujarPanel();
+  if (tdPausa && tdPantalla == 1) {
+    fill(0, 0, 0, 120);
+    noStroke();
+    rect(0, TD_HUD, ANCHO, ALTO - TD_HUD);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(60);
+    text("PAUSA", ANCHO / 2, ALTO / 2 - 20);
+    textSize(22);
+    text("ESPACIO o el botón de pausa para seguir", ANCHO / 2, ALTO / 2 + 40);
+  }
+  if (tdPantalla >= 2) tdDibujarFinal();
+  textAlign(LEFT, BASELINE);
+  strokeWeight(1);
+  noStroke();
+}
+
+// Un cuadro de una hoja de sprites centrado en (x, y) con lado "lado".
+void tdSprite(PImage hoja, int cw, int ch, int fila, int col, float x, float y, float lado) {
+  dibujarHoja(hoja, cw, ch, fila, col, x - lado / 2, y - lado * ch / cw / 2, lado / cw);
+}
+
+// Icono de iconos.png (o un círculo de color si no está).
+void tdIcono(int i, float x, float y, float lado, int c) {
+  if (hay(tdImgIconos)) { tdSprite(tdImgIconos, 64, 64, 0, i, x, y, lado); return; }
+  noStroke();
+  fill(c);
+  ellipse(x, y, lado * 0.7, lado * 0.7);
+}
+
+// Botones con sprite: minijuegos/moderador/botones/<img>.png, del mismo tamaño w x h del botón.
+// Con el mouse encima el botón sube 2 px; si no se puede usar, sale en gris.
+// texto = true: el sprite no trae texto y el código lo escribe encima (Mejorar y Vender, que cambian de número).
+// Si falta el sprite, se dibuja un rectángulo del color c con el texto.
+String[] tdBotNombre = new String[24];
+PImage[] tdBotImg = new PImage[24];
+int tdBotN = 0;
+
+// Busca (y carga la primera vez) el sprite de un botón.
+PImage tdImagenBoton(String nombre) {
+  for (int i = 0; i < tdBotN; i++) if (tdBotNombre[i].equals(nombre)) return tdBotImg[i];
+  if (tdBotN >= tdBotNombre.length) return null;
+  tdBotNombre[tdBotN] = nombre;
+  tdBotImg[tdBotN] = cargarSiExiste("minijuegos/moderador/botones/" + nombre + ".png");
+  tdBotN++;
+  return tdBotImg[tdBotN - 1];
+}
+
+void tdBoton(String img, boolean texto, float x, float y, float w, float h, String t, int c, boolean activo, float tam) {
+  noStroke();
+  boolean encima = activo && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+  PImage b = tdImagenBoton(img);
+  float sube = 0;
+  if (encima) sube = 2;
+  if (hay(b)) {
+    if (!activo) tint(140);
+    image(b, x, y - sube, w, h);
+    noTint();
+    if (!texto) return;
+  } else {
+    if (!activo) fill(120, 120, 130);
+    else if (encima) fill(lerpColor(c, color(255), 0.2));
+    else fill(c);
+    rect(x, y - sube, w, h, 10);
+  }
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(tam);
+  text(t, x + w / 2, y - sube + h / 2 - 2);
+}
+
+boolean tdDentro(float x, float y, float w, float h) {
+  return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+}
+
+// Fondo del nivel. Sin imagen: dibuja el camino y la meta.
+void tdDibujarMapa() {
+  if (hay(tdImgMapa[tdNivel])) {
+    image(tdImgMapa[tdNivel], 0, 0, ANCHO, ALTO);
+  } else {
+    background(226, 232, 242);
+    noFill();
+    strokeJoin(ROUND);
+    stroke(150, 140, 125);
+    strokeWeight(70);
+    beginShape();
+    for (int k = 0; k < tdCamN; k++) vertex(tdCamX[k], tdCamY[k]);
+    endShape();
+    stroke(214, 200, 172);
+    strokeWeight(58);
+    beginShape();
+    for (int k = 0; k < tdCamN; k++) vertex(tdCamX[k], tdCamY[k]);
+    endShape();
+    strokeWeight(1);
+    noStroke();
+  }
+  // la meta: tu feed
+  float fx = constrain(tdCamX[tdCamN - 1], 70, ANCHO - 70), fy = constrain(tdCamY[tdCamN - 1], TD_HUD + 70, ALTO - 70);
+  if (hay(tdImgFeed)) image(tdImgFeed, fx - 64, fy - 64, 128, 128);
+  else {
+    fill(60, 120, 220);
+    ellipse(fx, fy, 96, 96);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(18);
+    text("TU\nFEED", fx, fy - 2);
+  }
+}
+
+// Los lugares vacíos donde se puede poner una torre.
+void tdDibujarLugares() {
+  for (int k = 0; k < tdNumLugares; k++) {
+    float x = tdLugarX(k), y = tdLugarY(k);
+    if (tdTorTipo[k] < 0) {
+      if (hay(tdImgLugar)) image(tdImgLugar, x - 48, y - 48, 96, 96);
+      else {
+        fill(120, 170, 120, 200);
+        stroke(50, 90, 50);
+        strokeWeight(3);
+        ellipse(x, y, 80, 80);
+        noStroke();
+        fill(255, 255, 255, 180);
+        textAlign(CENTER, CENTER);
+        textSize(34);
+        text("+", x, y - 3);
+      }
+    }
+    if (k == tdSel) {
+      noFill();
+      stroke(255, 230, 80);
+      strokeWeight(4);
+      ellipse(x, y, 96, 96);
+      strokeWeight(1);
+      noStroke();
+    }
+  }
+}
+
+void tdDibujarFuegos() {
+  for (int f = 0; f < TD_MAX_FUEGO; f++) {
+    if (tdFuego[f][4] > 0) {
+      float x = tdFuego[f][0], y = tdFuego[f][1], r = tdFuego[f][2];
+      if (hay(tdImgFuego)) tdSprite(tdImgFuego, 96, 96, 0, (tdCuadro / 6) % 4, x, y, r * 2);
+      else {
+        noStroke();
+        fill(255, 120, 30, 90);
+        ellipse(x, y, r * 2, r * 2);
+        fill(255, 200, 60, 90);
+        ellipse(x, y, r * 1.2 + 6 * sin(tdCuadro * 0.3), r * 1.2);
+      }
+    }
+  }
+}
+
+void tdDibujarMuros() {
+  for (int s = 0; s < tdNumLugares; s++) {
+    if (tdTorTipo[s] == 3) {
+      float x = tdMuroX[s], y = tdMuroY[s];
+      // línea de la torre al muro
+      stroke(255, 140, 40, 90);
+      strokeWeight(3);
+      line(tdLugarX(s), tdLugarY(s), x, y);
+      noStroke();
+      strokeWeight(1);
+      if (tdMuroCaido[s] > 0) {
+        fill(80, 80, 80, 160);
+        ellipse(x, y, 60, 30);
+        fill(255);
+        textAlign(CENTER, CENTER);
+        textSize(16);
+        text(str(tdMuroCaido[s] / 60 + 1), x, y - 2);
+      } else {
+        if (hay(tdImgMuro)) tdSprite(tdImgMuro, 128, 96, 0, (tdCuadro / 5) % 4, x, y - 12, 120);
+        else {
+          fill(220, 70, 30);
+          rect(x - 40, y - 34, 80, 56, 6);
+          fill(255, 190, 50, 200);
+          rect(x - 34, y - 30 + 4 * sin(tdCuadro * 0.4), 68, 22, 6);
+        }
+        tdBarra(x, y - 48, 70, tdMuroHP[s] / tdDanio(s), color(255, 150, 40));
+      }
+    }
+  }
+}
+
+// Barra de vida pequeña
+void tdBarra(float x, float y, float w, float p, int c) {
+  noStroke();
+  fill(30, 30, 30, 180);
+  rect(x - w / 2, y, w, 7, 3);
+  fill(c);
+  rect(x - w / 2, y, w * constrain(p, 0, 1), 7, 3);
+}
+
+void tdDibujarEnemigos() {
+  for (int k = 0; k < TD_MAX_ENE; k++) {
+    if (tdEne[k][E_VIVO] == 1) {
+      int t = int(tdEne[k][E_TIPO]);
+      float x = tdEne[k][E_X], y = tdEne[k][E_Y], r = TD_ENEMIGOS[t][5];
+      if (hay(tdImgEnemigos)) {
+        int cuadroE = 0;
+        if (tdEne[k][E_ATURDIDO] <= 0) cuadroE = (tdCuadro / 8 + k) % 4;
+        pushMatrix();
+        translate(x, y);
+        if (tdEne[k][E_DIR] < 0) scale(-1, 1);
+        if (tdEne[k][E_GOLPE] > 0) tint(255, 130, 130);
+        tdSprite(tdImgEnemigos, 64, 64, t, cuadroE, 0, 0, r * 3.6);
+        noTint();
+        popMatrix();
+      } else {
+        if (tdEne[k][E_GOLPE] > 0) fill(255);
+        else if (t == 0) fill(150, 150, 160);
+        else if (t == 1) fill(90, 200, 230);
+        else if (t == 2) fill(210, 60, 60);
+        else if (t == 3) fill(70, 110, 210);
+        else if (t == 4) fill(120, 200, 70);
+        else fill(150, 60, 190);
+        stroke(30);
+        strokeWeight(2);
+        ellipse(x, y, r * 2, r * 2);
+        noStroke();
+        strokeWeight(1);
+        fill(255);
+        textAlign(CENTER, CENTER);
+        textSize(r * 0.9);
+        text(TD_ENE_NOMBRE[t].substring(0, 1), x, y - 2);
+      }
+      if (tdEne[k][E_HP] < tdEne[k][E_HPMAX]) tdBarra(x, y - r - 12, max(30, r * 2), tdEne[k][E_HP] / tdEne[k][E_HPMAX], color(90, 210, 90));
+      if (tdEne[k][E_ATURDIDO] > 0) tdIcono(9, x, y - r - 22, 26, color(255, 240, 90));
+      if (tdEne[k][E_QUEMA_T] > 0) tdIcono(10, x + r, y - r, 20, color(255, 130, 30));
+    }
+  }
+}
+
+// Columna del sprite de una torre: niveles 1-4, luego A5, A6, B5, B6.
+int tdColumnaTorre(int s) {
+  if (tdTorNivel[s] <= 4) return tdTorNivel[s] - 1;
+  return 4 + tdTorRama[s] * 2 + (tdTorNivel[s] - 5);
+}
+
+void tdDibujarTorres() {
+  for (int s = 0; s < tdNumLugares; s++) {
+    int t = tdTorTipo[s];
+    if (t >= 0) {
+      float x = tdLugarX(s), y = tdLugarY(s);
+      if (s == tdSel) {
+        noStroke();
+        fill(255, 255, 255, 40);
+        ellipse(x, y, tdAlcance(s) * 2, tdAlcance(s) * 2);
+        stroke(255, 255, 255, 120);
+        noFill();
+        ellipse(x, y, tdAlcance(s) * 2, tdAlcance(s) * 2);
+        noStroke();
+      }
+      if (hay(tdImgTorres)) tdSprite(tdImgTorres, 96, 96, t, tdColumnaTorre(s), x, y - 10, 96);
+      else {
+        if (t == 0) fill(90, 160, 90);
+        else if (t == 1) fill(240, 200, 40);
+        else if (t == 2) fill(80, 80, 90);
+        else fill(220, 90, 40);
+        stroke(30);
+        strokeWeight(3);
+        rect(x - 34, y - 44, 68, 68, 10);
+        noStroke();
+        strokeWeight(1);
+        fill(255);
+        textAlign(CENTER, CENTER);
+        textSize(30);
+        text(TD_TORRE_NOMBRE[t].substring(0, 1), x, y - 12);
+        // cañón que mira al último objetivo
+        if (t != 3) {
+          stroke(30);
+          strokeWeight(5);
+          line(x, y - 10, x + cos(tdTorAngulo[s]) * 34, y - 10 + sin(tdTorAngulo[s]) * 34);
+          noStroke();
+          strokeWeight(1);
+        }
+      }
+      // nivel: puntitos (dorados si ya tiene rama)
+      for (int i = 0; i < tdTorNivel[s]; i++) {
+        if (i >= 4) fill(255, 200, 40); else fill(255);
+        ellipse(x - 25 + i * 10, y + 34, 8, 8);
+      }
+    }
+  }
+}
+
+void tdDibujarProyectiles() {
+  for (int p = 0; p < TD_MAX_PROY; p++) {
+    if (tdProy[p][P_VIVO] == 1) {
+      int tipo = int(tdProy[p][P_TIPO]);
+      float x = tdProy[p][P_X], y = tdProy[p][P_Y];
+      if (hay(tdImgProy)) {
+        pushMatrix();
+        translate(x, y);
+        if (tipo == 0) rotate(tdProy[p][P_ANG]);
+        tdSprite(tdImgProy, 32, 32, 0, tipo, 0, 0, 32);
+        popMatrix();
+      } else if (tipo == 0) {
+        stroke(60, 40, 20);
+        strokeWeight(3);
+        line(x, y, x - cos(tdProy[p][P_ANG]) * 18, y - sin(tdProy[p][P_ANG]) * 18);
+        noStroke();
+        strokeWeight(1);
+      } else {
+        fill(40);
+        if (tipo == 1) ellipse(x, y, 20, 20); else ellipse(x, y, 12, 12);
+      }
+    }
+  }
+}
+
+void tdDibujarEfectos() {
+  for (int k = 0; k < TD_MAX_EFE; k++) {
+    if (tdEfe[k][5] > 0) {
+      int tipo = int(tdEfe[k][4]);
+      float p = 1 - tdEfe[k][5] / tdEfe[k][6];
+      float x = tdEfe[k][0], y = tdEfe[k][1];
+      if (tipo == 0) {
+        if (hay(tdImgExplosion)) tdSprite(tdImgExplosion, 128, 128, 0, min(3, int(p * 4)), x, y, tdEfe[k][7] * 1.2);
+        else {
+          noStroke();
+          fill(255, 160, 40, 200 * (1 - p));
+          ellipse(x, y, tdEfe[k][7] * (0.5 + p), tdEfe[k][7] * (0.5 + p));
+        }
+      } else if (tipo == 1) {
+        // rayo en zigzag
+        stroke(140, 220, 255, 255 * (1 - p));
+        strokeWeight(4);
+        float x2 = tdEfe[k][2], y2 = tdEfe[k][3];
+        float ax = x, ay = y;
+        for (int i = 1; i <= 5; i++) {
+          float bx = lerp(x, x2, i / 5.0) + random(-10, 10), by = lerp(y, y2, i / 5.0) + random(-10, 10);
+          if (i == 5) { bx = x2; by = y2; }
+          line(ax, ay, bx, by);
+          ax = bx;
+          ay = by;
+        }
+        noStroke();
+        strokeWeight(1);
+      } else {
+        noFill();
+        stroke(255, 255, 255, 220 * (1 - p));
+        strokeWeight(3);
+        ellipse(x, y, tdEfe[k][7] * (0.6 + p), tdEfe[k][7] * (0.6 + p));
+        noStroke();
+        strokeWeight(1);
+      }
+    }
+  }
+}
+
+// Barra de arriba: nivel, vidas, karma, ola y botones.
+void tdDibujarHUD() {
+  noStroke();
+  fill(34, 36, 52, 235);
+  rect(0, 0, ANCHO, TD_HUD);
+  fill(255);
+  textAlign(LEFT, CENTER);
+  textSize(22);
+  text((tdNivel + 1) + ". " + TD_NOMBRES[tdNivel], 20, TD_HUD / 2);
+  tdIcono(0, 470, TD_HUD / 2, 40, color(230, 70, 80));
+  fill(255);
+  textAlign(LEFT, CENTER);
+  text(str(tdVidas), 495, TD_HUD / 2);
+  tdIcono(1, 575, TD_HUD / 2, 40, color(250, 200, 60));
+  fill(255);
+  textAlign(LEFT, CENTER);
+  text(str(tdKarma), 600, TD_HUD / 2);
+  String ola = "Ola " + max(1, tdOla + 1) + "/" + tdOlas;
+  if (tdOla >= 0) ola = ola + "  ·  " + max(0, (tdOlaDuracion - tdOlaCuadros) / 60) + " s";
+  text(ola, 700, TD_HUD / 2);
+  // botones
+  String sig = "Siguiente ola (N)";
+  if (tdOla < 0) sig = "¡Empezar!";
+  boolean puede = tdOla < 0 || (tdTodosSalieron && tdOla + 1 < tdOlas);
+  if (tdOla + 1 >= tdOlas) sig = "Última ola";
+  String sigImg = "siguiente_ola";
+  if (tdOla < 0) sigImg = "empezar";
+  if (tdOla + 1 >= tdOlas) sigImg = "ultima_ola";
+  tdBoton(sigImg, false, 1000, 10, 220, 44, sig, color(60, 150, 90), puede && tdPantalla == 1, 19);
+  String v = "x1";
+  if (tdVel == 2) v = "x2";
+  tdBoton(v, false, 1230, 10, 70, 44, v, color(70, 110, 190), tdPantalla == 1, 20);
+  String pa = "Pausa";
+  if (tdPausa) pa = "Seguir";
+  String paImg = "pausa";
+  if (tdPausa) paImg = "seguir";
+  tdBoton(paImg, false, 1310, 10, 110, 44, pa, color(110, 90, 170), tdPantalla == 1, 19);
+  tdBoton("niveles_barra", false, 1430, 10, 150, 44, "Niveles", color(170, 70, 60), true, 19);
+}
+
+// Posición del panel del lugar seleccionado (al lado del lugar, sin salirse de la pantalla).
+float tdPanelX() {
+  return constrain(tdLugarX(tdSel) + 60, 10, ANCHO - 350);
+}
+float tdPanelY() {
+  return constrain(tdLugarY(tdSel) - 140, TD_HUD + 10, ALTO - 330);
+}
+
+// Panel para construir (lugar vacío) o para mejorar/vender (lugar con torre).
+void tdDibujarPanel() {
+  float px = tdPanelX(), py = tdPanelY();
+  noStroke();
+  fill(250, 246, 236, 245);
+  rect(px, py, 340, 320, 14);
+  int t = tdTorTipo[tdSel];
+  if (t < 0) {
+    fill(40);
+    textAlign(LEFT, TOP);
+    textSize(22);
+    text("Construir torre", px + 16, py + 12);
+    for (int i = 0; i < 4; i++) {
+      float y = py + 50 + i * 66;
+      boolean alcanza = tdKarma >= TD_TORRE_COSTO[i];
+      boolean encima = tdDentro(px + 10, y, 320, 60);
+      if (encima) fill(225, 235, 250); else fill(240, 236, 226);
+      rect(px + 10, y, 320, 60, 10);
+      if (hay(tdImgTorres)) tdSprite(tdImgTorres, 96, 96, i, 0, px + 42, y + 30, 54);
+      else {
+        if (i == 0) fill(90, 160, 90); else if (i == 1) fill(240, 200, 40); else if (i == 2) fill(80, 80, 90); else fill(220, 90, 40);
+        rect(px + 20, y + 8, 44, 44, 8);
+      }
+      if (alcanza) fill(30); else fill(150);
+      textAlign(LEFT, TOP);
+      textSize(18);
+      text(TD_TORRE_NOMBRE[i] + "  ·  " + TD_TORRE_COSTO[i] + " karma", px + 78, y + 6);
+      textSize(13);
+      fill(90);
+      text(TD_TORRE_TEXTO[i], px + 78, y + 28);
+    }
+    return;
+  }
+  fill(40);
+  textAlign(LEFT, TOP);
+  textSize(22);
+  text(TD_TORRE_NOMBRE[t], px + 16, py + 12);
+  textSize(16);
+  fill(90);
+  String nivel = "Nivel " + tdTorNivel[tdSel];
+  if (tdTorRama[tdSel] >= 0) nivel = nivel + "  ·  " + TD_RAMA_NOMBRE[t * 2 + tdTorRama[tdSel]];
+  text(nivel, px + 16, py + 42);
+  fill(40);
+  if (t == 3) text("Vida del muro: " + int(tdDanio(tdSel)) + "\nSe levanta otra vez 5 s después de caer.", px + 16, py + 70);
+  else text("Daño: " + nf(tdDanio(tdSel), 0, 1) + "   Alcance: " + int(tdAlcance(tdSel)) + "\nDispara cada " + nf(tdRecarga(tdSel) / 60.0, 0, 2) + " s", px + 16, py + 70);
+  int costo = tdCostoMejora(tdSel);
+  if (tdTorNivel[tdSel] == 4) {
+    // escoger rama
+    for (int r = 0; r < 2; r++) {
+      float bx = px + 12 + r * 162, by = py + 120;
+      boolean encima = tdDentro(bx, by, 154, 130);
+      if (tdKarma < costo) fill(200, 200, 205); else if (encima) fill(255, 225, 140); else fill(250, 210, 110);
+      rect(bx, by, 154, 130, 10);
+      if (hay(tdImgRamas)) tdSprite(tdImgRamas, 96, 96, 0, t * 2 + r, bx + 77, by + 44, 64);
+      fill(40);
+      textAlign(CENTER, TOP);
+      textSize(17);
+      text(TD_RAMA_NOMBRE[t * 2 + r], bx + 77, by + 82);
+      textSize(14);
+      text(costo + " karma", bx + 77, by + 104);
+      if (encima) {
+        // la descripción de la rama, debajo del panel
+        fill(30, 30, 40, 230);
+        rect(px, py + 326, 340, 64, 10);
+        fill(255);
+        textAlign(LEFT, TOP);
+        textSize(14);
+        text(TD_RAMA_TEXTO[t * 2 + r], px + 12, py + 334);
+      }
+    }
+  } else if (tdTorNivel[tdSel] < TD_NIVEL_MAX) {
+    tdBoton("mejorar", true, px + 12, py + 130, 316, 60, "Mejorar a nivel " + (tdTorNivel[tdSel] + 1) + "  ·  " + costo, color(60, 140, 90), tdKarma >= costo, 19);
+    if (tdTorNivel[tdSel] < 4) {
+      fill(90);
+      textAlign(LEFT, TOP);
+      textSize(14);
+      text("En el nivel 5 escoges una de dos ramas.", px + 16, py + 200);
+    }
+  } else {
+    fill(150, 110, 20);
+    textAlign(LEFT, TOP);
+    textSize(18);
+    text("Nivel máximo", px + 16, py + 150);
+  }
+  tdBoton("vender", true, px + 12, py + 262, 316, 46, "Vender  ·  +" + (tdTorGastado[tdSel] * 7 / 10), color(170, 80, 60), true, 18);
+}
+
+// Cartel de ganaste / perdiste.
+void tdDibujarFinal() {
+  noStroke();
+  fill(0, 0, 0, 150);
+  rect(0, 0, ANCHO, ALTO);
+  fill(250, 246, 236);
+  rect(500, 280, 600, 320, 18);
+  fill(40);
+  textAlign(CENTER, CENTER);
+  textSize(44);
+  if (tdPantalla == 2) text("¡Feed limpio!", 800, 340); else text("Se llenó tu feed", 800, 340);
+  textSize(20);
+  fill(90);
+  if (tdPantalla == 2) {
+    String m = "Ganaste el nivel " + (tdNivel + 1) + " con " + tdVidas + " vidas.";
+    if (tdNivel + 1 < TD_N) m = m + "\nSe desbloqueó: " + TD_NOMBRES[tdNivel + 1];
+    text(m, 800, 410);
+  } else {
+    text("Llegaron demasiados. Prueba otras torres o ramas.", 800, 410);
+  }
+  if (tdPantalla == 2 && tdNivel + 1 < TD_N) tdBoton("siguiente_nivel", false, 530, 490, 260, 70, "Siguiente nivel", color(60, 150, 90), true, 22);
+  else tdBoton("reintentar", false, 530, 490, 260, 70, "Reintentar", color(60, 150, 90), true, 22);
+  tdBoton("niveles", false, 810, 490, 260, 70, "Niveles", color(110, 90, 170), true, 22);
+}
+
+// Menú de niveles: una tarjeta por nivel (bloqueado, disponible o ganado).
+void tdDibujarMenu() {
+  if (hay(tdImgMenu)) image(tdImgMenu, 0, 0, ANCHO, ALTO);
+  else {
+    noStroke();
+    for (int i = 0; i < 18; i++) {
+      fill(lerpColor(color(28, 30, 52), color(64, 40, 90), i / 17.0));
+      rect(0, i * 50, ANCHO, 50);
+    }
+  }
+  if (!hay(tdImgMenu)) {
+    // el título solo si no hay imagen (menu_niveles.png ya lo trae)
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(64);
+    text("MODERADOR", ANCHO / 2, 110);
+    textSize(22);
+    fill(210, 210, 235);
+    text("Defiende tu feed. Pon torres en los círculos; cada nivel ganado abre el siguiente.", ANCHO / 2, 170);
+  }
+  for (int k = 0; k < TD_N; k++) {
+    float x = 70 + k * 296, y = 230;
+    boolean abierto = TD_NIVELES[k][0] == 1;
+    boolean encima = abierto && tdDentro(x, y, 270, 420);
+    noStroke();
+    if (encima) fill(255); else fill(238, 236, 246);
+    rect(x, y, 270, 420, 16);
+    // miniatura del mapa
+    if (hay(tdImgMapa[k])) image(tdImgMapa[k], x + 10, y + 10, 250, 140);
+    else {
+      fill(214, 222, 236);
+      rect(x + 10, y + 10, 250, 140, 8);
+      stroke(190, 170, 130);
+      strokeWeight(5);
+      noFill();
+      int[] c = TD_CAMINOS[k];
+      beginShape();
+      for (int i = 0; i + 1 < c.length; i = i + 2) vertex(x + 10 + constrain(c[i], 0, ANCHO) * 250.0 / ANCHO, y + 10 + constrain(c[i + 1], 0, ALTO) * 140.0 / ALTO);
+      endShape();
+      noStroke();
+      strokeWeight(1);
+    }
+    fill(30);
+    textAlign(LEFT, TOP);
+    textSize(16);
+    text("Nivel " + (k + 1), x + 16, y + 162);
+    textSize(21);
+    text(TD_NOMBRES[k], x + 16, y + 184, 240, 60);
+    textSize(16);
+    fill(80);
+    text(TD_DESCRIPCION[k], x + 16, y + 250);
+    int olas = 0;
+    for (int i = 3 + 2 * TD_NIVELES[k][2]; i < TD_NIVELES[k].length; i++) if (TD_NIVELES[k][i] == -1) olas++;
+    text(olas + " olas  ·  " + TD_NIVELES[k][2] + " lugares", x + 16, y + 310);
+    if (bandera("TD_GANO_" + k) > 0) {
+      tdIcono(8, x + 232, y + 376, 48, color(70, 170, 90));
+      fill(50, 140, 70);
+      textSize(18);
+      textAlign(LEFT, CENTER);
+      text("Ganado", x + 16, y + 376);
+    }
+    if (!abierto) {
+      fill(20, 20, 30, 170);
+      rect(x, y, 270, 420, 16);
+      tdIcono(7, x + 135, y + 170, 90, color(200, 200, 210));
+      fill(230);
+      textAlign(CENTER, CENTER);
+      textSize(17);
+      text("Gana el nivel " + k + "\npara abrirlo", x + 135, y + 260);
+    }
+  }
+  tdBoton("volver_pixelzone", false, 650, 668, 300, 64, "Volver a PixelZone", color(170, 70, 60), true, 24);
+  fill(200);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  text("ESPACIO pausa  ·  N siguiente ola  ·  click en un círculo para construir o mejorar", ANCHO / 2, 760);
+}
+
+
+// ---------------------------------------------------------------------
+//  Mouse
+// ---------------------------------------------------------------------
+void clickModerador() {
+  if (tdPantalla == 0) {
+    for (int k = 0; k < TD_N; k++) {
+      if (TD_NIVELES[k][0] == 1 && tdDentro(70 + k * 296, 230, 270, 420)) { tdEmpezarNivel(k); return; }
+    }
+    if (tdDentro(650, 668, 300, 64)) salirModerador();
+    return;
+  }
+  if (tdPantalla >= 2) {
+    if (tdDentro(530, 490, 260, 70)) {
+      if (tdPantalla == 2 && tdNivel + 1 < TD_N) tdEmpezarNivel(tdNivel + 1); else tdEmpezarNivel(tdNivel);
+    } else if (tdDentro(810, 490, 260, 70)) {
+      tdPantalla = 0;
+    }
+    return;
+  }
+  // barra de arriba
+  if (mouseY < TD_HUD) {
+    if (tdDentro(1000, 10, 220, 44)) tdSaltarOla();
+    if (tdDentro(1230, 10, 70, 44)) { if (tdVel == 1) tdVel = 2; else tdVel = 1; }
+    if (tdDentro(1310, 10, 110, 44)) tdPausa = !tdPausa;
+    if (tdDentro(1430, 10, 150, 44)) { tdPantalla = 0; tdSel = -1; }
+    return;
+  }
+  // panel abierto
+  if (tdSel >= 0) {
+    float px = tdPanelX(), py = tdPanelY();
+    if (tdDentro(px, py, 340, 320)) {
+      int t = tdTorTipo[tdSel];
+      if (t < 0) {
+        for (int i = 0; i < 4; i++) {
+          if (tdDentro(px + 10, py + 50 + i * 66, 320, 60) && tdKarma >= TD_TORRE_COSTO[i]) { tdConstruir(tdSel, i); return; }
+        }
+      } else {
+        if (tdTorNivel[tdSel] == 4) {
+          if (tdDentro(px + 12, py + 120, 154, 130)) tdMejorar(tdSel, 0);
+          if (tdDentro(px + 174, py + 120, 154, 130)) tdMejorar(tdSel, 1);
+        } else if (tdDentro(px + 12, py + 130, 316, 60)) {
+          tdMejorar(tdSel, -1);
+        }
+        if (tdDentro(px + 12, py + 262, 316, 46)) tdVender(tdSel);
+      }
+      return;
+    }
+  }
+  // click en un lugar
+  int nuevo = -1;
+  for (int k = 0; k < tdNumLugares; k++) {
+    if (dist(mouseX, mouseY, tdLugarX(k), tdLugarY(k)) < 48) nuevo = k;
+  }
+  if (nuevo == tdSel) tdSel = -1; else tdSel = nuevo;
+}
+
+// ============================ MODERIA: ENTRENA TU IA (pantalla propia: screen 6) ============================
+// App del celular (quinto ícono de la primera fila). Inspirado en "while True: learn()": los mensajes
+// entran por la izquierda, pasan por un nodo (la neurona) y salen a las bandejas de la derecha.
+// Como el ajedrez y el Moderador, tiene su propio espacio en el draw y el resto del juego se detiene.
+//
+//   Nivel 1: una neurona que aprende "bueno o malo". Tú etiquetas 16 mensajes y ella aprende de cada
+//            uno (se ve cómo cambian sus pesos). Después la entrenas más vueltas y la pruebas con
+//            mensajes que nunca vio: tiene que acertar el 80 %.
+//   Nivel 2: cuatro neuronas, una por tipo (bueno, burla, amenaza, estafa). Gana la más segura.
+//   Nivel 3: perceptrones clásicos que se configuran a mano (pesos y sesgo) para armar compuertas
+//            Y / O / Y-NO y decidir a dónde se manda cada mensaje (psicóloga, coordinación, bloquear).
+//
+// Los mensajes están en la matriz IA_MSJ: cada fila es un mensaje con su información (los rasgos que ve
+// la neurona) y lo que es de verdad (para calificar). La neurona NO lee el texto: solo ve los rasgos.
+
+// Rasgos de cada mensaje (las entradas de la neurona)
+final int IA_RASGOS = 10;
+String[] IA_RASGO_NOMBRE = {"Grosería", "Risa", "Apodo o insulto", "Habla de daño", "Gritos (MAYÚS)", "Enlace", "Pide plata o datos", "Desconocido", "Amable", "Se repite"};
+final int IA_BUENO = 0, IA_BURLA = 1, IA_AMENAZA = 2, IA_ESTAFA = 3;
+String[] IA_TIPO_NOMBRE = {"Bueno", "Burla", "Amenaza", "Estafa"};
+
+// { quién lo manda, texto, 10 rasgos (0/1) en el orden de IA_RASGO_NOMBRE, tipo de verdad }
+// Se llena en su propia función (datos_IA_MSJ) por el límite de 64 KB por método de Java.
+String[][] IA_MSJ;
+void datos_IA_MSJ() {
+  IA_MSJ = new String[][] {
+  {"Vale", "¿Alguien tiene las fotos del tablero de cálculo? Porfa", "0", "0", "0", "0", "0", "0", "0", "0", "1", "0", "0"},
+  {"Juanpa", "JAJAJA el profe se cayó de la silla y siguió explicando como si nada", "0", "1", "0", "0", "1", "0", "0", "0", "0", "0", "0"},
+  {"Mamá", "Mijo, ¿ya almorzó? Le dejé arepas en la nevera", "0", "0", "0", "0", "0", "0", "0", "0", "1", "0", "0"},
+  {"Profe Mendoza", "Les dejo el taller aquí: drive.google.com/taller3", "0", "0", "0", "0", "0", "1", "0", "0", "0", "0", "0"},
+  {"Sofi", "¡¡FELIZ CUMPLE CAMI!! Te quiero montones", "0", "0", "0", "0", "1", "0", "0", "0", "1", "0", "0"},
+  {"Andrés", "Jaja parce eres un crack, gracias por pasarme el resumen", "0", "1", "0", "0", "0", "0", "0", "0", "1", "0", "0"},
+  {"Grupo del salón", "Recuerden que mañana es la salida al museo, traer carné", "0", "0", "0", "0", "0", "0", "0", "0", "0", "1", "0"},
+  {"Lili", "¿Me ayudas con la tarea de inglés? Te pago con un helado", "0", "0", "0", "0", "0", "0", "0", "0", "1", "0", "0"},
+  {"Kevin", "Ya llegó el control nuevo, pasen por PixelZone", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"},
+  {"Laura", "Qué pena, mañana no puedo ir al grupo de estudio, perdón", "0", "0", "0", "0", "0", "0", "0", "0", "1", "0", "0"},
+  {"Número desconocido", "Hola, soy la mamá de Mateo, ¿este es el número de Juli? Gracias", "0", "0", "0", "0", "0", "0", "0", "1", "1", "0", "0"},
+  {"Camilo", "¿¿VAN A VER EL DIRECTO HOY??", "0", "0", "0", "0", "1", "0", "0", "0", "0", "0", "0"},
+  {"Bruno", "Jajaja quedamos 3-0, qué partidazo", "0", "1", "0", "0", "0", "0", "0", "0", "0", "0", "0"},
+  {"Profe Núñez", "Quien no entregó el taller tiene hasta el viernes.", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"},
+  {"Marta", "Fiesta en la terraza el sábado, cada uno lleva algo :)", "0", "0", "0", "0", "0", "0", "0", "0", "1", "0", "0"},
+  {"Papá", "Ya voy saliendo del trabajo, ¿le llevo algo?", "0", "0", "0", "0", "0", "0", "0", "0", "1", "0", "0"},
+
+  {"Juanpa", "Jajaja miren al gordo en la foto del paseo", "0", "1", "1", "0", "0", "0", "0", "0", "0", "0", "1"},
+  {"Anónimo", "Nadie te quiere en el grupo, lárgate jaja", "0", "1", "1", "0", "0", "0", "0", "1", "0", "0", "1"},
+  {"Bruno", "JAJAJA el cerebrito llorando porque sacó 4.5", "0", "1", "1", "0", "1", "0", "0", "0", "0", "0", "1"},
+  {"Sofi", "Qué asco tu ropa, ¿la sacaste de la basura? jaja", "0", "1", "1", "0", "0", "0", "0", "0", "0", "0", "1"},
+  {"Andrés", "Ahí va la jirafa, cuidado con el techo jajaja", "0", "1", "1", "0", "0", "0", "0", "0", "0", "0", "1"},
+  {"Grupo del salón", "Pásenle el sticker del enano a Pipe jajaja", "0", "1", "1", "0", "0", "0", "0", "0", "0", "1", "1"},
+  {"Anónimo", "Eres un fracasado, ni tu mamá te aguanta", "0", "0", "1", "0", "0", "0", "0", "1", "0", "0", "1"},
+  {"Juanpa", "Otra vez el bobo ese hablando, cállate jaja", "0", "1", "1", "0", "0", "0", "0", "0", "0", "1", "1"},
+  {"Camilo", "LOOOL qué mal juegas, manco", "0", "1", "1", "0", "1", "0", "0", "0", "0", "0", "1"},
+  {"Bruno", "Jaja la nueva habla como robot", "0", "1", "1", "0", "0", "0", "0", "0", "0", "0", "1"},
+  {"Vale", "Ridícula, todo el salón se ríe de ti", "0", "0", "1", "0", "0", "0", "0", "0", "0", "1", "1"},
+  {"Anónimo", "Mk eres más feo que un tenis viejo jajaja", "1", "1", "1", "0", "0", "0", "0", "1", "0", "0", "1"},
+
+  {"Anónimo", "A la salida te espero, vas a ver", "0", "0", "0", "1", "0", "0", "0", "1", "0", "0", "2"},
+  {"Bruno", "Si le cuentas al profe te va peor", "0", "0", "0", "1", "0", "0", "0", "0", "0", "0", "2"},
+  {"Número desconocido", "TE VOY A ROMPER LA CARA", "0", "0", "0", "1", "1", "0", "0", "1", "0", "0", "2"},
+  {"Número desconocido", "Sé dónde vives. Cuidado.", "0", "0", "0", "1", "0", "0", "0", "1", "0", "0", "2"},
+  {"Anónimo", "Borra esa foto o la paso a todo el colegio", "0", "0", "0", "1", "0", "0", "0", "1", "0", "0", "2"},
+  {"Anónimo", "Mañana no llegues al colegio si sabes lo que te conviene", "0", "0", "0", "1", "0", "0", "0", "1", "0", "1", "2"},
+  {"Anónimo", "Ojalá te pase algo, malp*rido", "1", "0", "1", "1", "0", "0", "0", "1", "0", "0", "2"},
+  {"Juanpa", "Te voy a esperar con los del once, no te escapas", "0", "0", "0", "1", "0", "0", "0", "0", "0", "1", "2"},
+  {"Anónimo", "O me pasas las respuestas o le digo a todos tu secreto", "0", "0", "0", "1", "0", "0", "1", "1", "0", "0", "2"},
+  {"Número desconocido", "TE ESTOY VIGILANDO", "0", "0", "0", "1", "1", "0", "0", "1", "0", "0", "2"},
+
+  {"Número desconocido", "¡¡Ganaste un iPhone!! Reclama aquí: bit.ly/premio", "0", "0", "0", "0", "1", "1", "0", "1", "0", "0", "3"},
+  {"Número desconocido", "Hola, soy del banco, confirma tu clave en este link", "0", "0", "0", "0", "0", "1", "1", "1", "1", "0", "3"},
+  {"Número desconocido", "Mamá, cambié de número, mándame 50 mil a este Nequi urgente", "0", "0", "0", "0", "0", "0", "1", "1", "0", "0", "3"},
+  {"Número desconocido", "Tu cuenta de Aurora+ será suspendida, verifica aquí: aurora-plus.co", "0", "0", "0", "0", "0", "1", "1", "1", "0", "0", "3"},
+  {"Número desconocido", "¡¡GANA PLATA DESDE TU CASA!! Escríbeme", "0", "0", "0", "0", "1", "0", "1", "1", "0", "1", "3"},
+  {"Número desconocido", "Necesito tu código de WhatsApp, te llegó por error, porfa", "0", "0", "0", "0", "0", "0", "1", "1", "1", "0", "3"},
+  {"Número desconocido", "Pase a recoger su premio, solo pague el envío: link", "0", "0", "0", "0", "0", "1", "1", "1", "0", "0", "3"},
+  {"Vale", "Mira este video donde sales jaja bit.ly/xk2", "0", "1", "0", "0", "0", "1", "0", "0", "0", "1", "3"},
+  {"Número desconocido", "OFERTA: tenis a 20 mil, consigna ya", "0", "0", "0", "0", "1", "0", "1", "1", "0", "1", "3"},
+  {"Número desconocido", "Comparte este mensaje con 10 personas o tendrás mala suerte", "0", "0", "0", "0", "0", "0", "0", "1", "0", "1", "3"},
+  {"Número desconocido", "Tu paquete está retenido, paga aquí: envios-col.net", "0", "0", "0", "0", "0", "1", "1", "1", "0", "0", "3"},
+  {"Número desconocido", "Inviertes 100 y recibes 1000 en una semana, te explico", "0", "0", "0", "0", "0", "0", "1", "1", "0", "1", "3"}
+  };
+}
+
+// Niveles
+final int IA_N = 3;
+String[] IA_NIVEL_NOMBRE = {"¿Bueno o malo?", "¿Qué tipo de mensaje es?", "¿A quién se lo mando?"};
+String[] IA_NIVEL_TEXTO = {
+  "Una neurona. Tú le enseñas con\n16 mensajes y luego la pruebas\ncon 16 que nunca vio.\nMeta: 80 % de aciertos.",
+  "Cuatro neuronas, una por tipo:\nbueno, burla, amenaza, estafa.\nLes enseñas con 20 mensajes.\nMeta: 80 % de aciertos.",
+  "Perceptrones a mano: ajusta\npesos y sesgo para armar\ncompuertas Y, O e Y-NO que\nenvían cada mensaje a su lugar."
+};
+int[] IA_ETIQUETAR = {16, 20};
+int[] IA_PROBAR = {16, 20};
+int[] IA_META = {80, 80};
+float[] IA_TASAS = {0.05, 0.2, 0.8};
+
+// Fases
+final int IA_MENU = 0, IA_ETIQ = 1, IA_ENTRENAR = 2, IA_PRUEBA = 3, IA_RESULTADO = 4, IA_PUERTAS = 5, IA_RUTEO = 6;
+int iaFase = IA_MENU;
+int iaNivel = 0;
+
+// Neuronas: iaW[neurona][rasgo] e iaB[neurona]. El nivel 1 usa solo la neurona 0 ("¿es malo?").
+float[][] iaW = new float[4][IA_RASGOS];
+float[] iaB = new float[4];
+int iaTasa = 1;                        // índice en IA_TASAS
+
+// Orden revuelto de los mensajes: los primeros para etiquetar, los siguientes para la prueba
+int[] iaOrden = new int[50];
+int iaEtiquetados = 0;
+int[] iaEtiqueta = new int[50];        // lo que TÚ dijiste de cada mensaje etiquetado (por posición en iaOrden)
+float[] iaError = new float[120];      // error después de cada vuelta de entrenamiento (para la gráfica)
+int iaVueltas = 0;
+int iaVueltasPendientes = 0;           // vueltas que faltan por animar
+
+// Prueba
+int iaProbados = 0, iaAciertos = 0;
+int iaPruebaTimer = 0;
+int iaVolando = -1;                    // mensaje que va en camino (posición en iaOrden)
+int iaVuelo = 0;                       // cuadros del vuelo (0 a IA_VUELO)
+int iaVueloDestino = 0;
+final int IA_VUELO = 40;
+int[] iaBandejaN = new int[4];         // cuántos llegaron a cada bandeja
+int[] iaBandejaMal = new int[4];       // cuántos de esos estaban mal
+
+// Nivel 3: compuertas. { nombre, entrada 1, entrada 2, tipo (Y, O, YNO) }
+String[][] IA_PUERTA = {
+  {"Acoso", "Es burla", "Se repite", "Y"},
+  {"Psicóloga", "Es malo", "Es burla", "Y"},
+  {"Coordinación", "Es amenaza", "Hay acoso", "O"},
+  {"Bloquear", "Es estafa", "Es conocido", "YNO"}
+};
+String[] IA_PUERTA_TEXTO = {
+  "Se activa si es burla Y se repite.",
+  "Se activa si es malo Y es burla.",
+  "Se activa si es amenaza O hay acoso.",
+  "Se activa si es estafa Y NO es conocido."
+};
+float[][] iaPuertaW = new float[4][3];   // w1, w2, sesgo
+String[] IA_DESTINO = {"Psicóloga", "Coordinación", "Bloquear", "Tu bandeja"};
+
+int iaDesde = 0;
+int iaGanadosNuevos = 0;
+PImage iaImgFondo, iaImgNeurona, iaImgCarta, iaImgBandejas, iaImgMenu, ui_icNeurona;
+boolean iaSpritesBuscados = false, iaIconoBuscado = false;
+
+
+// ---------------------------------------------------------------------
+//  Entrar y salir
+// ---------------------------------------------------------------------
+
+// Lo llama el ícono del celular.
+void iniciarNeurona() {
+  if (IA_MSJ == null) datos_IA_MSJ();
+  if (!iaSpritesBuscados) {
+    iaSpritesBuscados = true;
+    iaImgFondo = cargarSiExiste("minijuegos/moderia/fondo.png");
+    iaImgMenu = cargarSiExiste("minijuegos/moderia/menu.png");
+    iaImgNeurona = cargarSiExiste("minijuegos/moderia/neurona.png");
+    iaImgCarta = cargarSiExiste("minijuegos/moderia/mensaje.png");
+    iaImgBandejas = cargarSiExiste("minijuegos/moderia/bandejas.png");
+  }
+  teclaIzq = false;
+  teclaDer = false;
+  cel = 0;
+  iaDesde = millis();
+  iaGanadosNuevos = 0;
+  iaFase = IA_MENU;
+  screen = 6;
+  cargado = 0;
+}
+
+// La ventaja de ModerIA: cada nivel ganado entrena el filtro de tu celular, que bloquea parte del spam.
+// Al estudiar con el celular al lado y cuando no puedes dormir, las notificaciones llegan más espaciadas:
+// 15 % por nivel (hasta 45 %). Devuelve por cuánto se multiplica el tiempo entre notificaciones.
+float filtroModeria() {
+  int n = 0;
+  for (int k = 0; k < 3; k++) if (bandera("IA_GANO_" + k) > 0) n++;
+  return 1 + 0.15 * n;
+}
+
+// ¿Está abierto el nivel n? (el 1 siempre; los demás si ganaste el anterior)
+boolean iaAbierto(int n) {
+  return n == 0 || bandera("IA_GANO_" + (n - 1)) > 0;
+}
+
+void salirNeurona() {
+  int quieto = millis() - iaDesde;
+  iaDesde = 0;
+  desplazarTiempos(quieto);
+  avanzarTiempo(min(90, 10 + quieto / 20000));
+  String r = "";
+  if (iaGanadosNuevos > 0) r = aplicarEfectos("Notas +" + (2 * iaGanadosNuevos), -1);
+  if (r.equals("")) aviso("Cierras ModerIA.");
+  else aviso("Cierras ModerIA. Tu filtro bloquea " + round((filtroModeria() - 1) * 100) + " % más de notificaciones.  (" + r + ")");
+  screen = 1;
+  cargado = 0;
+}
+
+// Empieza el nivel n desde cero (neuronas en blanco, mensajes revueltos).
+void iaEmpezarNivel(int n) {
+  iaNivel = n;
+  for (int i = 0; i < 50; i++) iaOrden[i] = i;
+  for (int i = 49; i > 0; i--) {
+    int j = int(random(i + 1));
+    int t = iaOrden[i];
+    iaOrden[i] = iaOrden[j];
+    iaOrden[j] = t;
+  }
+  for (int k = 0; k < 4; k++) {
+    for (int r = 0; r < IA_RASGOS; r++) iaW[k][r] = 0;
+    iaB[k] = 0;
+    for (int r = 0; r < 3; r++) iaPuertaW[k][r] = 0;
+  }
+  iaEtiquetados = 0;
+  iaVueltas = 0;
+  iaVueltasPendientes = 0;
+  iaTasa = 1;
+  if (n == 2) iaFase = IA_PUERTAS; else iaFase = IA_ETIQ;
+}
+
+
+// ---------------------------------------------------------------------
+//  La neurona
+// ---------------------------------------------------------------------
+
+// Rasgo r del mensaje m (0 o 1)
+float iaRasgo(int m, int r) {
+  return float(IA_MSJ[m][2 + r]);
+}
+int iaTipo(int m) {
+  return int(IA_MSJ[m][2 + IA_RASGOS]);
+}
+
+// Salida de la neurona k para el mensaje m: sigmoide(w·x + b), entre 0 y 1.
+float iaSalida(int k, int m) {
+  float z = iaB[k];
+  for (int r = 0; r < IA_RASGOS; r++) z = z + iaW[k][r] * iaRasgo(m, r);
+  return 1 / (1 + exp(-z));
+}
+
+// Lo que cree la IA del mensaje m: nivel 1 → 0 bueno / 1 malo; nivel 2 → el tipo de la neurona más segura.
+int iaPrediccion(int m) {
+  if (iaNivel == 0) {
+    if (iaSalida(0, m) >= 0.5) return 1;
+    return 0;
+  }
+  int mejor = 0;
+  for (int k = 1; k < 4; k++) if (iaSalida(k, m) > iaSalida(mejor, m)) mejor = k;
+  return mejor;
+}
+
+// Qué tan segura está de su predicción (0 a 1)
+float iaConfianza(int m) {
+  if (iaNivel == 0) {
+    float p = iaSalida(0, m);
+    return max(p, 1 - p);
+  }
+  float suma = 0;
+  for (int k = 0; k < 4; k++) suma = suma + iaSalida(k, m);
+  return iaSalida(iaPrediccion(m), m) / max(0.0001, suma);
+}
+
+// La respuesta correcta en este nivel (nivel 1: 0 bueno / 1 malo; nivel 2: el tipo)
+int iaVerdad(int m) {
+  if (iaNivel == 0) {
+    if (iaTipo(m) == IA_BUENO) return 0;
+    return 1;
+  }
+  return iaTipo(m);
+}
+
+// Aprende de un ejemplo: a cada peso le suma tasa × (lo esperado − lo que dijo) × entrada.
+// (la regla delta: si se equivocó por mucho, corrige mucho; si el rasgo no estaba, ese peso no cambia)
+void iaAprender(int m, int etiqueta) {
+  float tasa = IA_TASAS[iaTasa];
+  int neuronas = 4;
+  if (iaNivel == 0) neuronas = 1;
+  for (int k = 0; k < neuronas; k++) {
+    float esperado = 0;
+    if (iaNivel == 0 && etiqueta == 1) esperado = 1;
+    if (iaNivel == 1 && etiqueta == k) esperado = 1;
+    float error = esperado - iaSalida(k, m);
+    for (int r = 0; r < IA_RASGOS; r++) iaW[k][r] = iaW[k][r] + tasa * error * iaRasgo(m, r);
+    iaB[k] = iaB[k] + tasa * error;
+  }
+}
+
+// Tú etiquetas el mensaje actual: la IA aprende de él en el acto y pasa al siguiente.
+void iaEtiquetar(int etiqueta) {
+  int m = iaOrden[iaEtiquetados];
+  iaEtiqueta[iaEtiquetados] = etiqueta;
+  iaAprender(m, etiqueta);
+  iaEtiquetados++;
+  if (iaEtiquetados >= IA_ETIQUETAR[iaNivel]) {
+    iaFase = IA_ENTRENAR;
+    iaRegistrarError();
+  }
+}
+
+// Una vuelta de entrenamiento: repasa todos los mensajes etiquetados (con TUS etiquetas).
+void iaUnaVuelta() {
+  for (int i = 0; i < iaEtiquetados; i++) iaAprender(iaOrden[i], iaEtiqueta[i]);
+  iaRegistrarError();
+}
+
+// Guarda el error actual (% de tus etiquetas en que la IA no está de acuerdo) para la gráfica.
+void iaRegistrarError() {
+  int malos = 0;
+  for (int i = 0; i < iaEtiquetados; i++) if (iaPrediccion(iaOrden[i]) != iaEtiqueta[i]) malos++;
+  float e = 100.0 * malos / max(1, iaEtiquetados);
+  if (iaVueltas < iaError.length) {
+    iaError[iaVueltas] = e;
+    iaVueltas++;
+  } else {
+    for (int i = 1; i < iaError.length; i++) iaError[i - 1] = iaError[i];
+    iaError[iaError.length - 1] = e;
+  }
+}
+
+// Empieza la prueba con mensajes que la IA nunca vio.
+void iaEmpezarPrueba() {
+  iaFase = IA_PRUEBA;
+  iaProbados = 0;
+  iaAciertos = 0;
+  iaPruebaTimer = 20;
+  iaVolando = -1;
+  for (int k = 0; k < 4; k++) { iaBandejaN[k] = 0; iaBandejaMal[k] = 0; }
+}
+
+// Cada cuadro: anima las vueltas de entrenamiento y los mensajes de la prueba.
+void actualizarNeurona() {
+  if (iaFase == IA_ENTRENAR && iaVueltasPendientes > 0 && cuadros % 3 == 0) {
+    iaUnaVuelta();
+    iaVueltasPendientes--;
+  }
+  if (iaFase == IA_PRUEBA || iaFase == IA_RUTEO) {
+    for (int p = 0; p < pasoCuadro; p++) iaPasoPrueba();
+  }
+}
+
+// Un paso de la prueba: suelta un mensaje, lo hace volar hasta su bandeja y lo cuenta.
+void iaPasoPrueba() {
+  int total = IA_PROBAR[min(1, iaNivel)];
+  if (iaFase == IA_RUTEO) total = 20;
+  if (iaVolando >= 0) {
+    iaVuelo++;
+    if (iaVuelo >= IA_VUELO) {
+      int m = iaOrden[iaVolando];
+      iaBandejaN[iaVueloDestino]++;
+      boolean bien;
+      if (iaFase == IA_RUTEO) bien = iaVueloDestino == iaDestinoCorrecto(m);
+      else bien = iaVueloDestino == iaVerdad(m);
+      if (bien) iaAciertos++; else iaBandejaMal[iaVueloDestino]++;
+      iaProbados++;
+      iaVolando = -1;
+      iaPruebaTimer = 8;
+    }
+    return;
+  }
+  if (iaProbados >= total) {
+    iaTerminarPrueba();
+    return;
+  }
+  iaPruebaTimer--;
+  if (iaPruebaTimer > 0) return;
+  // en la prueba van los mensajes que vienen después de los etiquetados
+  int desde = IA_ETIQUETAR[min(1, iaNivel)];
+  if (iaFase == IA_RUTEO) desde = 0;
+  iaVolando = desde + iaProbados;
+  iaVuelo = 0;
+  int m = iaOrden[iaVolando];
+  if (iaFase == IA_RUTEO) iaVueloDestino = iaRuteo(m); else iaVueloDestino = iaPrediccion(m);
+}
+
+void iaTerminarPrueba() {
+  iaFase = IA_RESULTADO;
+  if (iaGano() && bandera("IA_GANO_" + iaNivel) == 0) {
+    sumarBandera("IA_GANO_" + iaNivel, 1);
+    iaGanadosNuevos++;
+  }
+}
+
+int iaPorcentaje() {
+  return round(100.0 * iaAciertos / max(1, iaProbados));
+}
+boolean iaGano() {
+  if (iaNivel == 2) return iaPorcentaje() == 100;
+  return iaPorcentaje() >= IA_META[iaNivel];
+}
+
+
+// ---------------------------------------------------------------------
+//  Nivel 3: perceptrones a mano (compuertas)
+// ---------------------------------------------------------------------
+
+// Salida de la compuerta g para las entradas a, b (0 o 1): 1 si w1·a + w2·b + sesgo > 0.
+int iaPuerta(int g, int a, int b) {
+  if (iaPuertaW[g][0] * a + iaPuertaW[g][1] * b + iaPuertaW[g][2] > 0) return 1;
+  return 0;
+}
+
+// Lo que debería dar la compuerta g (la tabla de verdad correcta)
+int iaPuertaEsperada(int g, int a, int b) {
+  String t = IA_PUERTA[g][3];
+  if (t.equals("Y") && a == 1 && b == 1) return 1;
+  if (t.equals("O") && (a == 1 || b == 1)) return 1;
+  if (t.equals("YNO") && a == 1 && b == 0) return 1;
+  return 0;
+}
+
+// ¿La compuerta g ya da bien las 4 filas?
+boolean iaPuertaBien(int g) {
+  for (int a = 0; a <= 1; a++) {
+    for (int b = 0; b <= 1; b++) {
+      if (iaPuerta(g, a, b) != iaPuertaEsperada(g, a, b)) return false;
+    }
+  }
+  return true;
+}
+boolean iaPuertasBien() {
+  for (int g = 0; g < 4; g++) if (!iaPuertaBien(g)) return false;
+  return true;
+}
+
+// A dónde manda el sistema el mensaje m con TUS compuertas (0 psicóloga, 1 coordinación, 2 bloquear, 3 bandeja).
+// Gana la más grave: coordinación, luego bloquear, luego psicóloga.
+int iaRuteo(int m) {
+  int malo = 0, burla = 0, amenaza = 0, estafa = 0;
+  if (iaTipo(m) != IA_BUENO) malo = 1;
+  if (iaTipo(m) == IA_BURLA) burla = 1;
+  if (iaTipo(m) == IA_AMENAZA) amenaza = 1;
+  if (iaTipo(m) == IA_ESTAFA) estafa = 1;
+  int repite = int(iaRasgo(m, 9));
+  int conocido = 1 - int(iaRasgo(m, 7));
+  int acoso = iaPuerta(0, burla, repite);
+  if (iaPuerta(2, amenaza, acoso) == 1) return 1;
+  if (iaPuerta(3, estafa, conocido) == 1) return 2;
+  if (iaPuerta(1, malo, burla) == 1) return 0;
+  return 3;
+}
+
+// A dónde debería ir de verdad (con las compuertas bien armadas)
+int iaDestinoCorrecto(int m) {
+  int t = iaTipo(m);
+  boolean repite = iaRasgo(m, 9) == 1;
+  boolean conocido = iaRasgo(m, 7) == 0;
+  if (t == IA_AMENAZA || (t == IA_BURLA && repite)) return 1;
+  if (t == IA_ESTAFA && !conocido) return 2;
+  if (t == IA_BURLA) return 0;
+  return 3;
+}
+
+// Botones de - y + de cada peso (pasos de 0.5, entre -2 y 2)
+void iaCambiarPeso(int g, int cual, float d) {
+  iaPuertaW[g][cual] = constrain(iaPuertaW[g][cual] + d, -2, 2);
+}
+
+// Arranca el ruteo de 20 mensajes con las compuertas que armaste.
+void iaEmpezarRuteo() {
+  iaFase = IA_RUTEO;
+  iaProbados = 0;
+  iaAciertos = 0;
+  iaPruebaTimer = 20;
+  iaVolando = -1;
+  for (int k = 0; k < 4; k++) { iaBandejaN[k] = 0; iaBandejaMal[k] = 0; }
+}
+
+
+// ---------------------------------------------------------------------
+//  Botones con sprite: minijuegos/moderia/botones/<img>.png del tamaño w x h.
+//  Sube 2 px con el mouse encima; en gris si no se puede usar. Sin sprite: rectángulo de color con texto.
+//  texto = true: el sprite no trae texto y el código lo escribe encima.
+// ---------------------------------------------------------------------
+String[] iaBotNombre = new String[24];
+PImage[] iaBotImg = new PImage[24];
+int iaBotN = 0;
+
+PImage iaImagenBoton(String nombre) {
+  for (int i = 0; i < iaBotN; i++) if (iaBotNombre[i].equals(nombre)) return iaBotImg[i];
+  if (iaBotN >= iaBotNombre.length) return null;
+  iaBotNombre[iaBotN] = nombre;
+  iaBotImg[iaBotN] = cargarSiExiste("minijuegos/moderia/botones/" + nombre + ".png");
+  iaBotN++;
+  return iaBotImg[iaBotN - 1];
+}
+
+void iaBoton(String img, boolean texto, float x, float y, float w, float h, String t, int c, boolean activo, float tam) {
+  noStroke();
+  boolean encima = activo && iaDentro(x, y, w, h);
+  PImage b = iaImagenBoton(img);
+  float sube = 0;
+  if (encima) sube = 2;
+  if (hay(b)) {
+    if (!activo) tint(140);
+    image(b, x, y - sube, w, h);
+    noTint();
+    if (!texto) return;
+  } else {
+    if (!activo) fill(120, 120, 130);
+    else if (encima) fill(lerpColor(c, color(255), 0.2));
+    else fill(c);
+    rect(x, y - sube, w, h, 10);
+  }
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(tam);
+  text(t, x + w / 2, y - sube + h / 2 - 2);
+}
+
+boolean iaDentro(float x, float y, float w, float h) {
+  return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+}
+
+// Color de un peso: verde si empuja hacia "sí", rojo si empuja hacia "no"
+int iaColorPeso(float w) {
+  if (w >= 0) return lerpColor(color(200, 200, 200), color(40, 170, 80), constrain(w / 2.0, 0, 1));
+  return lerpColor(color(200, 200, 200), color(210, 50, 50), constrain(-w / 2.0, 0, 1));
+}
+
+
+// ---------------------------------------------------------------------
+//  Dibujo
+// ---------------------------------------------------------------------
+void dibujarNeurona() {
+  if (hay(iaImgFondo) && iaFase != IA_MENU) image(iaImgFondo, 0, 0, ANCHO, ALTO);
+  else if (iaFase != IA_MENU) background(24, 28, 44);
+  if (iaFase == IA_MENU) { iaDibujarMenu(); return; }
+  // barra de arriba
+  noStroke();
+  fill(14, 16, 28, 230);
+  rect(0, 0, ANCHO, 64);
+  fill(255);
+  textAlign(LEFT, CENTER);
+  textSize(24);
+  text("ModerIA  ·  Nivel " + (iaNivel + 1) + ": " + IA_NIVEL_NOMBRE[iaNivel], 24, 32);
+  iaBoton("niveles", false, 1430, 10, 150, 44, "Niveles", color(170, 70, 60), true, 19);
+
+  if (iaFase == IA_PUERTAS) { iaDibujarPuertas(); textAlign(LEFT, BASELINE); return; }
+  if (iaFase == IA_ETIQ) iaDibujarEtiquetar();
+  if (iaFase == IA_ENTRENAR) iaDibujarEntrenar();
+  if (iaFase == IA_ETIQ || iaFase == IA_ENTRENAR) {
+    iaDibujarNodo(820, 330);
+    iaDibujarPesos();
+  }
+  if (iaFase == IA_PRUEBA || iaFase == IA_RUTEO || iaFase == IA_RESULTADO) iaDibujarPrueba();
+  if (iaFase == IA_RESULTADO) iaDibujarResultado();
+  textAlign(LEFT, BASELINE);
+  strokeWeight(1);
+  noStroke();
+}
+
+// Menú de niveles
+void iaDibujarMenu() {
+  if (hay(iaImgMenu)) image(iaImgMenu, 0, 0, ANCHO, ALTO);
+  else {
+    noStroke();
+    for (int i = 0; i < 18; i++) {
+      fill(lerpColor(color(18, 24, 40), color(30, 60, 80), i / 17.0));
+      rect(0, i * 50, ANCHO, 50);
+    }
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(64);
+    text("ModerIA", ANCHO / 2, 110);
+    textSize(22);
+    fill(190, 220, 230);
+    text("Entrena una IA para moderar mensajes. Lo que le enseñes es lo que va a aprender.", ANCHO / 2, 170);
+  }
+  for (int k = 0; k < IA_N; k++) {
+    float x = 170 + k * 440, y = 230;
+    boolean abierto = iaAbierto(k);
+    noStroke();
+    if (abierto && iaDentro(x, y, 380, 400)) fill(255); else fill(236, 240, 246);
+    rect(x, y, 380, 400, 16);
+    fill(40);
+    textAlign(LEFT, TOP);
+    textSize(18);
+    text("Nivel " + (k + 1), x + 24, y + 24);
+    textSize(28);
+    text(IA_NIVEL_NOMBRE[k], x + 24, y + 52, 340, 80);
+    textSize(18);
+    fill(80);
+    text(IA_NIVEL_TEXTO[k], x + 24, y + 150);
+    if (bandera("IA_GANO_" + k) > 0) {
+      fill(40, 150, 70);
+      textSize(22);
+      text("Ganado", x + 24, y + 340);
+    }
+    if (!abierto) {
+      fill(10, 14, 24, 180);
+      rect(x, y, 380, 400, 16);
+      fill(230);
+      textAlign(CENTER, CENTER);
+      textSize(20);
+      text("Gana el nivel " + k + "\npara abrirlo", x + 190, y + 200);
+    }
+  }
+  iaBoton("cerrar", false, 650, 690, 300, 64, "Cerrar ModerIA", color(170, 70, 60), true, 24);
+  fill(200, 220, 240);
+  textAlign(CENTER, CENTER);
+  textSize(17);
+  int filtro = round((filtroModeria() - 1) * 100);
+  if (filtro > 0) text("Filtro ModerIA activo: las notificaciones llegan " + filtro + " % más espaciadas cuando estudias o no puedes dormir.", ANCHO / 2, 790);
+  else text("Cada nivel que ganes entrena el filtro de tu celular: menos notificaciones al estudiar y al dormir.", ANCHO / 2, 790);
+}
+
+// Las 10 "fichas" de rasgos del mensaje m (encendidas si el mensaje lo tiene). m = -1: todas apagadas.
+void iaDibujarRasgos(int m) {
+  for (int r = 0; r < IA_RASGOS; r++) {
+    float x = 60 + (r % 2) * 265, y = 440 + (r / 2) * 44;
+    boolean on = m >= 0 && iaRasgo(m, r) == 1;
+    noStroke();
+    if (on) fill(255, 214, 90); else fill(60, 66, 90);
+    rect(x, y, 255, 36, 8);
+    if (on) fill(40); else fill(150, 156, 180);
+    textAlign(LEFT, CENTER);
+    textSize(16);
+    text(IA_RASGO_NOMBRE[r], x + 12, y + 17);
+  }
+}
+
+// Cable de cada rasgo a la neurona: grueso si el peso es grande, verde/rojo según el signo.
+void iaDibujarCables(int m, float nx, float ny) {
+  int k = 0;
+  if (iaNivel == 1 && m >= 0) k = iaPrediccion(m);
+  for (int r = 0; r < IA_RASGOS; r++) {
+    float x = 60 + (r % 2) * 265 + 255, y = 440 + (r / 2) * 44 + 18;
+    boolean on = m >= 0 && iaRasgo(m, r) == 1;
+    int c = iaColorPeso(iaW[k][r]);
+    if (on) stroke(c, 230); else stroke(c, 60);
+    strokeWeight(1 + min(8, abs(iaW[k][r]) * 3));
+    line(x, y, nx - 90, ny);
+  }
+  noStroke();
+  strokeWeight(1);
+}
+
+// La neurona (el nodo del centro)
+void iaDibujarNodo(float nx, float ny) {
+  int m = -1;
+  if (iaFase == IA_ETIQ) m = iaOrden[iaEtiquetados];
+  iaDibujarCables(m, nx, ny);
+  if (hay(iaImgNeurona)) image(iaImgNeurona, nx - 100, ny - 100, 200, 200);
+  else {
+    fill(70, 90, 160);
+    stroke(150, 180, 255);
+    strokeWeight(4);
+    ellipse(nx, ny, 180, 180);
+    noStroke();
+    strokeWeight(1);
+  }
+  fill(255);
+  textAlign(CENTER, CENTER);
+  if (m >= 0) {
+    int p = iaPrediccion(m);
+    String que;
+    if (iaNivel == 0) { if (p == 1) que = "Malo"; else que = "Bueno"; }
+    else que = IA_TIPO_NOMBRE[p];
+    int conf = round(iaConfianza(m) * 100);
+    textSize(18);
+    text("La IA cree:", nx, ny - 30);
+    textSize(30);
+    if (iaEtiquetados == 0) text("No sabe", nx, ny + 4); else text(que, nx, ny + 4);
+    textSize(18);
+    text(conf + " %", nx, ny + 38);
+  } else {
+    textSize(22);
+    text("Neurona", nx, ny);
+  }
+}
+
+// Panel de la derecha: lo que aprendió (los pesos)
+void iaDibujarPesos() {
+  noStroke();
+  fill(250, 250, 255, 235);
+  rect(1040, 90, 520, 560, 14);
+  fill(40);
+  textAlign(LEFT, TOP);
+  textSize(20);
+  text("Lo que aprendió (pesos)", 1060, 104);
+  textSize(14);
+  fill(90);
+  text("Verde: hace pensar que sí.  Rojo: que no.", 1060, 132);
+  if (iaNivel == 0) {
+    textSize(14);
+    for (int r = 0; r <= IA_RASGOS; r++) {
+      float y = 168 + r * 42;
+      float w;
+      String nom;
+      if (r < IA_RASGOS) { w = iaW[0][r]; nom = IA_RASGO_NOMBRE[r]; } else { w = iaB[0]; nom = "Sesgo (b)"; }
+      fill(50);
+      textAlign(LEFT, CENTER);
+      text(nom, 1060, y + 14);
+      fill(220);
+      rect(1350, y + 2, 2, 24);
+      fill(iaColorPeso(w));
+      float largo = constrain(w * 50, -150, 150);
+      if (largo >= 0) rect(1352, y + 4, largo, 20, 4); else rect(1350 + largo, y + 4, -largo, 20, 4);
+      fill(70);
+      textAlign(RIGHT, CENTER);
+      text(nf(w, 0, 2), 1548, y + 14);
+    }
+  } else {
+    // matriz de pesos: filas = rasgos, columnas = neuronas
+    textSize(14);
+    for (int k = 0; k < 4; k++) {
+      fill(50);
+      textAlign(CENTER, CENTER);
+      text(IA_TIPO_NOMBRE[k], 1250 + k * 75 + 35, 170);
+    }
+    for (int r = 0; r <= IA_RASGOS; r++) {
+      float y = 186 + r * 40;
+      fill(50);
+      textAlign(LEFT, CENTER);
+      if (r < IA_RASGOS) text(IA_RASGO_NOMBRE[r], 1060, y + 17); else text("Sesgo (b)", 1060, y + 17);
+      for (int k = 0; k < 4; k++) {
+        float w;
+        if (r < IA_RASGOS) w = iaW[k][r]; else w = iaB[k];
+        fill(iaColorPeso(w));
+        rect(1250 + k * 75, y + 2, 70, 32, 6);
+        fill(30);
+        textAlign(CENTER, CENTER);
+        text(nf(w, 0, 1), 1250 + k * 75 + 35, y + 17);
+      }
+    }
+  }
+}
+
+// Fase 1: etiquetar mensajes
+void iaDibujarEtiquetar() {
+  int m = iaOrden[iaEtiquetados];
+  iaDibujarCarta(m, 60, 100, 520, 300, 26);
+  iaDibujarRasgos(m);
+  fill(200, 210, 235);
+  textAlign(LEFT, TOP);
+  textSize(16);
+  text("Lo que ve la IA (no lee el texto, solo esto):", 60, 412);
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(24);
+  text("¿Qué es este mensaje?   (" + (iaEtiquetados + 1) + " de " + IA_ETIQUETAR[iaNivel] + ")", 800, 700);
+  if (iaNivel == 0) {
+    iaBoton("bueno", false, 525, 740, 250, 80, "Bueno", color(60, 150, 90), true, 30);
+    iaBoton("malo", false, 825, 740, 250, 80, "Malo", color(190, 60, 60), true, 30);
+  } else {
+    for (int k = 0; k < 4; k++) iaBoton(IA_TIPO_BOTON[k], false, 270 + k * 270, 740, 250, 80, IA_TIPO_NOMBRE[k], iaColorTipo(k), true, 28);
+  }
+}
+
+String[] IA_TIPO_BOTON = {"bueno", "burla", "amenaza", "estafa"};
+
+// "Y", "O" o "Y-NO"
+String iaNombreCompuerta(int g) {
+  if (IA_PUERTA[g][3].equals("YNO")) return "Y-NO";
+  return IA_PUERTA[g][3];
+}
+
+int iaColorTipo(int k) {
+  if (k == 0) return color(60, 150, 90);
+  if (k == 1) return color(220, 140, 40);
+  if (k == 2) return color(190, 60, 60);
+  return color(120, 80, 190);
+}
+
+// Un mensaje como carta (quién lo manda y el texto)
+void iaDibujarCarta(int m, float x, float y, float w, float h, float tam) {
+  noStroke();
+  if (hay(iaImgCarta)) image(iaImgCarta, x, y, w, h);
+  else {
+    fill(250, 250, 245);
+    rect(x, y, w, h, 14);
+  }
+  // quién lo manda va en la franja de arriba de la carta (el primer 20 %); el texto, debajo
+  fill(60, 90, 160);
+  textAlign(LEFT, CENTER);
+  textSize(tam * 0.75);
+  text(IA_MSJ[m][0], x + tam * 0.8, y + h * 0.1);
+  fill(30);
+  textAlign(LEFT, TOP);
+  textSize(tam);
+  text(IA_MSJ[m][1], x + tam * 0.8, y + h * 0.26, w - tam * 1.6, h * 0.7);
+}
+
+// Fase 2: entrenar más vueltas y ver cómo baja el error
+void iaDibujarEntrenar() {
+  noStroke();
+  fill(250, 250, 255, 235);
+  rect(60, 90, 520, 330, 14);
+  fill(40);
+  textAlign(LEFT, TOP);
+  textSize(20);
+  text("Ya le enseñaste " + iaEtiquetados + " mensajes.", 80, 104);
+  textSize(16);
+  fill(80);
+  text("Tasa de aprendizaje: cuánto corrige en cada error.", 80, 136);
+  String[] nom = {"Lenta 0.05", "Normal 0.2", "Rápida 0.8"};
+  for (int i = 0; i < 3; i++) {
+    int c = color(90, 100, 130);
+    if (i == iaTasa) c = color(60, 120, 210);
+    iaBoton("tasa_" + (i + 1), true, 80 + i * 162, 166, 152, 46, nom[i], c, true, 17);
+  }
+  iaBoton("entrenar", false, 80, 232, 480, 60, "Entrenar 20 vueltas", color(60, 150, 90), iaVueltasPendientes == 0, 22);
+  fill(80);
+  textSize(15);
+  textAlign(LEFT, TOP);
+  text("Cada vuelta repasa tus " + iaEtiquetados + " ejemplos. Ojo: si la entrenas\ndemasiado con pocos ejemplos, se los aprende de memoria.", 80, 308);
+  // gráfica del error
+  fill(250, 250, 255, 235);
+  rect(60, 440, 520, 260, 14);
+  fill(40);
+  textSize(18);
+  text("Desacuerdo con tus etiquetas (%)", 80, 452);
+  stroke(200);
+  line(100, 670, 560, 670);
+  line(100, 490, 100, 670);
+  noStroke();
+  fill(120);
+  textSize(12);
+  textAlign(RIGHT, CENTER);
+  text("100", 96, 490);
+  text("0", 96, 670);
+  if (iaVueltas > 1) {
+    stroke(210, 70, 60);
+    strokeWeight(3);
+    for (int i = 1; i < iaVueltas; i++) {
+      float x1 = 100 + (i - 1) * 460.0 / (iaError.length - 1), x2 = 100 + i * 460.0 / (iaError.length - 1);
+      line(x1, 670 - iaError[i - 1] * 1.8, x2, 670 - iaError[i] * 1.8);
+    }
+    noStroke();
+    strokeWeight(1);
+  }
+  fill(40);
+  textAlign(LEFT, TOP);
+  textSize(15);
+  if (iaVueltas > 0) text("Ahora: " + round(iaError[min(iaVueltas, iaError.length) - 1]) + " %  ·  vueltas: " + (iaVueltas - 1), 120, 678);
+  iaBoton("probar", false, 560, 740, 480, 80, "Probar con mensajes nuevos", color(60, 120, 210), iaVueltasPendientes == 0, 26);
+}
+
+// Fase 3: los mensajes nuevos vuelan a las bandejas
+void iaDibujarPrueba() {
+  int nb = 4;
+  if (iaNivel == 0) nb = 2;
+  // bandejas
+  for (int k = 0; k < nb; k++) {
+    float bx = 1180, by = iaBandejaY(k, nb), bh = iaBandejaAlto(nb);
+    noStroke();
+    if (hay(iaImgBandejas)) image(iaImgBandejas, bx, by, 360, bh);
+    else {
+      fill(240, 242, 250, 235);
+      rect(bx, by, 360, bh, 14);
+    }
+    String nom;
+    if (iaFase == IA_RUTEO || (iaFase == IA_RESULTADO && iaNivel == 2)) nom = IA_DESTINO[k];
+    else if (iaNivel == 0) { if (k == 0) nom = "Bueno"; else nom = "Malo"; }
+    else nom = IA_TIPO_NOMBRE[k];
+    fill(40);
+    textAlign(LEFT, TOP);
+    textSize(22);
+    text(nom, bx + 20, by + 14);
+    textSize(18);
+    text(iaBandejaN[k] + " mensajes", bx + 20, by + 48);
+    if (iaBandejaMal[k] > 0) {
+      fill(200, 50, 50);
+      text(iaBandejaMal[k] + " mal puestos", bx + 180, by + 48);
+    }
+  }
+  // el nodo del centro
+  noStroke();
+  if (iaNivel == 2) {
+    fill(90, 70, 150);
+    rect(720, 330, 200, 140, 20);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(22);
+    text("Compuertas", 820, 400);
+  } else if (hay(iaImgNeurona)) image(iaImgNeurona, 720, 300, 200, 200);
+  else {
+    fill(70, 90, 160);
+    ellipse(820, 400, 180, 180);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(22);
+    text("Neurona", 820, 400);
+  }
+  // bandeja de entrada (los que faltan)
+  int total = 20;
+  if (iaNivel < 2) total = IA_PROBAR[iaNivel];
+  int faltan = total - iaProbados;
+  if (iaVolando >= 0) faltan--;
+  for (int i = min(5, faltan) - 1; i >= 0; i--) {
+    fill(230, 232, 240);
+    rect(90 + i * 6, 360 - i * 6, 300, 80, 10);
+  }
+  fill(255);
+  textAlign(LEFT, TOP);
+  textSize(18);
+  text("Por revisar: " + max(0, faltan), 90, 460);
+  // el que va volando
+  if (iaVolando >= 0) {
+    int m = iaOrden[iaVolando];
+    float t = iaVuelo / (float) IA_VUELO;
+    float x, y;
+    float dy = iaBandejaY(iaVueloDestino, nb) + iaBandejaAlto(nb) / 2 - 40;
+    if (t < 0.5) { x = lerp(90, 670, t * 2); y = 360; }
+    else { x = lerp(670, 1210, (t - 0.5) * 2); y = lerp(360, dy, (t - 0.5) * 2); }
+    iaDibujarCarta(m, x, y, 300, 80, 15);
+  }
+  fill(255);
+  textAlign(CENTER, TOP);
+  textSize(24);
+  text("Aciertos: " + iaAciertos + " de " + iaProbados, 820, 560);
+}
+
+float iaBandejaAlto(int nb) {
+  if (nb == 2) return 250;
+  return 160;
+}
+float iaBandejaY(int k, int nb) {
+  return 100 + k * (iaBandejaAlto(nb) + 14);
+}
+
+// Resultado de la prueba
+void iaDibujarResultado() {
+  noStroke();
+  fill(0, 0, 0, 160);
+  rect(0, 64, ANCHO, ALTO - 64);
+  fill(250, 250, 255);
+  rect(420, 200, 760, 480, 18);
+  fill(40);
+  textAlign(CENTER, TOP);
+  textSize(44);
+  if (iaGano()) text("¡Aprendió!", 800, 230); else text("Todavía no", 800, 230);
+  textSize(24);
+  fill(70);
+  if (iaNivel == 2) {
+    text("Tu sistema mandó bien " + iaAciertos + " de " + iaProbados + " mensajes.", 800, 300);
+    if (!iaGano()) {
+      textSize(17);
+      text("Mira qué filas de las tablas siguen en rojo y ajusta esos pesos.", 800, 346);
+    }
+  } else {
+    text("Acertó " + iaPorcentaje() + " % de los mensajes nuevos (meta: " + IA_META[iaNivel] + " %).", 800, 300);
+    // ¿le enseñaste bien?
+    int bien = 0;
+    for (int i = 0; i < iaEtiquetados; i++) if (iaEtiqueta[i] == iaVerdad(iaOrden[i])) bien++;
+    textSize(20);
+    text("Tus etiquetas: " + bien + " de " + iaEtiquetados + " correctas.", 800, 346);
+    if (!iaGano()) {
+      textSize(17);
+      if (bien < iaEtiquetados) text("Si le enseñas mal, aprende mal: revisa tus etiquetas.", 800, 384);
+      else text("Prueba otra tasa de aprendizaje o entrénala más (o menos) vueltas.", 800, 384);
+    }
+  }
+  boolean sig = iaGano() && iaNivel + 1 < IA_N;
+  if (sig) iaBoton("siguiente_nivel", false, 470, 560, 320, 80, "Siguiente nivel", color(60, 150, 90), true, 24);
+  else if (iaGano()) iaBoton("niveles_grande", false, 470, 560, 320, 80, "Niveles", color(110, 90, 170), true, 24);
+  else if (iaNivel < 2) iaBoton("volver_entrenar", false, 470, 560, 320, 80, "Volver a entrenar", color(60, 120, 210), true, 24);
+  else iaBoton("ajustar_compuertas", false, 470, 560, 320, 80, "Ajustar compuertas", color(60, 120, 210), true, 24);
+  iaBoton("empezar_otra_vez", false, 810, 560, 320, 80, "Empezar otra vez", color(170, 70, 60), true, 24);
+}
+
+// Nivel 3: las cuatro compuertas
+void iaDibujarPuertas() {
+  for (int g = 0; g < 4; g++) {
+    float x = 60 + (g % 2) * 760, y = 80 + (g / 2) * 370;
+    boolean bien = iaPuertaBien(g);
+    noStroke();
+    if (bien) fill(230, 250, 235); else fill(246, 246, 252);
+    rect(x, y, 720, 350, 16);
+    fill(40);
+    textAlign(LEFT, TOP);
+    textSize(26);
+    text(IA_PUERTA[g][0] + "  (" + iaNombreCompuerta(g) + ")", x + 20, y + 14);
+    textSize(16);
+    fill(80);
+    text(IA_PUERTA_TEXTO[g], x + 20, y + 50);
+    // pesos con - y +
+    String[] nom = {"Peso de \"" + IA_PUERTA[g][1] + "\"", "Peso de \"" + IA_PUERTA[g][2] + "\"", "Sesgo (b)"};
+    for (int i = 0; i < 3; i++) {
+      float py = y + 92 + i * 70;
+      fill(40);
+      textAlign(LEFT, TOP);
+      textSize(16);
+      text(nom[i], x + 20, py);
+      iaBoton("menos", false, x + 20, py + 24, 40, 36, "-", color(90, 100, 130), true, 24);
+      fill(iaColorPeso(iaPuertaW[g][i]));
+      rect(x + 66, py + 24, 110, 36, 8);
+      fill(30);
+      textAlign(CENTER, CENTER);
+      textSize(20);
+      text(nf(iaPuertaW[g][i], 0, 1), x + 121, py + 41);
+      iaBoton("mas", false, x + 182, py + 24, 40, 36, "+", color(90, 100, 130), true, 24);
+    }
+    // tabla de verdad
+    float tx = x + 300, ty = y + 92;
+    fill(60);
+    textSize(15);
+    textAlign(CENTER, CENTER);
+    text(IA_PUERTA[g][1], tx + 60, ty + 10);
+    text(IA_PUERTA[g][2], tx + 170, ty + 10);
+    text("Sale", tx + 270, ty + 10);
+    text("Debe", tx + 350, ty + 10);
+    for (int a = 0; a <= 1; a++) {
+      for (int b = 0; b <= 1; b++) {
+        float ry = ty + 30 + (a * 2 + b) * 52;
+        int sale = iaPuerta(g, a, b), debe = iaPuertaEsperada(g, a, b);
+        if (sale == debe) fill(170, 225, 180); else fill(240, 170, 170);
+        rect(tx, ry, 400, 46, 8);
+        fill(30);
+        textSize(20);
+        text(str(a), tx + 60, ry + 23);
+        text(str(b), tx + 170, ry + 23);
+        text(str(sale), tx + 270, ry + 23);
+        text(str(debe), tx + 350, ry + 23);
+      }
+    }
+  }
+  // función de activación (escalón), en la esquina de abajo a la izquierda
+  noStroke();
+  fill(250, 250, 255, 235);
+  rect(60, 812, 980, 72, 12);
+  fill(40);
+  textAlign(LEFT, TOP);
+  textSize(16);
+  text("Función de activación (escalón):   z = w1·x1 + w2·x2 + b", 80, 822);
+  text("f(z) = 1 si z > 0        f(z) = 0 si z ≤ 0", 80, 852);
+  // dibujito del escalón
+  stroke(60, 90, 160);
+  strokeWeight(3);
+  line(900, 868, 950, 868);
+  line(950, 868, 950, 828);
+  line(950, 828, 1010, 828);
+  stroke(170);
+  strokeWeight(1);
+  line(890, 868, 1020, 868);
+  noStroke();
+  fill(120);
+  textSize(12);
+  textAlign(CENTER, TOP);
+  text("0", 950, 870);
+  iaBoton("probar_sistema", false, 1060, 818, 400, 60, "Probar el sistema", color(60, 150, 90), true, 22);
+}
+
+
+// ---------------------------------------------------------------------
+//  Mouse
+// ---------------------------------------------------------------------
+void clickNeurona() {
+  if (iaFase == IA_MENU) {
+    for (int k = 0; k < IA_N; k++) {
+      if (iaAbierto(k) && iaDentro(170 + k * 440, 230, 380, 400)) { iaEmpezarNivel(k); return; }
+    }
+    if (iaDentro(650, 690, 300, 64)) salirNeurona();
+    return;
+  }
+  if (iaDentro(1430, 10, 150, 44)) { iaFase = IA_MENU; return; }
+  if (iaFase == IA_ETIQ) {
+    if (iaNivel == 0) {
+      if (iaDentro(525, 740, 250, 80)) iaEtiquetar(0);
+      else if (iaDentro(825, 740, 250, 80)) iaEtiquetar(1);
+    } else {
+      for (int k = 0; k < 4; k++) if (iaDentro(270 + k * 270, 740, 250, 80)) iaEtiquetar(k);
+    }
+    return;
+  }
+  if (iaFase == IA_ENTRENAR) {
+    for (int i = 0; i < 3; i++) if (iaDentro(80 + i * 162, 166, 152, 46)) iaTasa = i;
+    if (iaVueltasPendientes == 0 && iaDentro(80, 232, 480, 60)) iaVueltasPendientes = 20;
+    if (iaVueltasPendientes == 0 && iaDentro(560, 740, 480, 80)) iaEmpezarPrueba();
+    return;
+  }
+  if (iaFase == IA_RESULTADO) {
+    if (iaDentro(470, 560, 320, 80)) {
+      if (iaGano() && iaNivel + 1 < IA_N) iaEmpezarNivel(iaNivel + 1);
+      else if (iaGano()) iaFase = IA_MENU;
+      else if (iaNivel < 2) iaFase = IA_ENTRENAR;
+      else iaFase = IA_PUERTAS;
+    }
+    if (iaDentro(810, 560, 320, 80)) iaEmpezarNivel(iaNivel);
+    return;
+  }
+  if (iaFase == IA_PUERTAS) {
+    for (int g = 0; g < 4; g++) {
+      float x = 60 + (g % 2) * 760, y = 80 + (g / 2) * 370;
+      for (int i = 0; i < 3; i++) {
+        float py = y + 92 + i * 70;
+        if (iaDentro(x + 20, py + 24, 40, 36)) iaCambiarPeso(g, i, -0.5);
+        if (iaDentro(x + 182, py + 24, 40, 36)) iaCambiarPeso(g, i, 0.5);
+      }
+    }
+    if (iaDentro(1060, 818, 400, 60)) iaEmpezarRuteo();
+  }
+}
+
+// Ícono de la app en el celular (primera fila, quinto lugar)
+void dibujarIconoNeurona() {
+  if (!iaIconoBuscado) {
+    iaIconoBuscado = true;
+    ui_icNeurona = cargarSiExiste("extras/interfaz/icono_moderia.png");
+  }
+  float x = 930, y = 80;
+  if (hay(ui_icNeurona)) image(ui_icNeurona, x, y, 80, 80);
+  else {
+    noStroke();
+    fill(70, 90, 160);
+    rect(x, y, 80, 80, 14);
+    fill(255);
+    textAlign(CENTER, CENTER);
+    textSize(30);
+    text("IA", x + 40, y + 38);
+  }
+  fill(225, 225, 235);
+  textAlign(CENTER, TOP);
+  textSize(15);
+  text("ModerIA", x + 40, y + 84);
+}
+
+// ============================ PARQUÉS EN FAMILIA (pantalla propia: screen 7) ============================
+// En la mesa del comedor (casa, C4), fuera de las comidas: parqués contra Lili, Papá y la abuela Nena.
+// Tablero en cruz de 9 x 9 casillas (como el parqués de verdad, pero pequeño):
+//   - las 4 esquinas de 3 x 3 son las cárceles (amarilla, azul, roja y verde);
+//   - el camino da la vuelta por las orillas de los brazos de la cruz: 28 casillas;
+//   - el centro de cada brazo es el pasillo de ese color (2 casillas) que lleva a la meta del centro.
+// Reglas (versión sencilla del parqués colombiano):
+//   - Dos dados. Cada dado mueve una ficha (puede ser la misma dos veces).
+//   - Para sacar fichas de la cárcel hay que sacar pares: salen todas las que estén presas.
+//   - Si no tienes fichas en el tablero, tienes 3 intentos para sacar pares.
+//   - Pares = vuelves a tirar (máximo 3 veces seguidas).
+//   - Si caes donde hay una ficha de otro y no es seguro, te la comes: vuelve a su cárcel.
+//   - Seguros: las salidas (círculos) y las estrellas.
+//   - Para entrar a la meta hay que sacar el número exacto. Gana el primero que meta las 4.
+// Los bots NO son IA: siguen reglas fijas con prioridades distintas (ver pqPuntajeJugada).
+//
+// Sprites en data/minijuegos/parques/: fondo.png (1600x900), tablero.png (720x720: la cruz de 9x9
+// casillas de 80 px), fichas.png (4 fichas de 48x48 en fila: amarillo, azul, rojo, verde),
+// dados.png (6 caras de 90x90 en fila, del 1 al 6) y botones/tirar.png (340x70), botones/salir.png (150x44),
+// botones/volver.png (320x80).
+
+final int PQ_J = 4, PQ_F = 4;
+final int PQ_LOOP = 28, PQ_META = 30;            // 0..27 el camino, 28..29 el pasillo, 30 la meta
+final float PQ_BX = 440, PQ_BY = 90, PQ_CEL = 80;
+String[] PQ_NOMBRE = {"Tú", "Lili", "Papá", "Abuela Nena"};
+String[] PQ_ESTILO = {"", "Agresiva: come siempre que puede", "Cuidadoso: busca los seguros", "Corredora: mueve la más adelantada"};
+int[][] PQ_COLOR = {{240, 200, 40}, {60, 120, 220}, {210, 60, 60}, {60, 170, 90}};
+// El camino: columna y fila de cada una de las 28 casillas, en el orden en que se avanza.
+// La casilla 0 es la salida amarilla; la azul es la 7, la roja la 14 y la verde la 21.
+int[] PQ_CAMINO = {
+  0, 3,  1, 3,  2, 3,  3, 2,  3, 1,  3, 0,  4, 0,
+  5, 0,  5, 1,  5, 2,  6, 3,  7, 3,  8, 3,  8, 4,
+  8, 5,  7, 5,  6, 5,  5, 6,  5, 7,  5, 8,  4, 8,
+  3, 8,  3, 7,  3, 6,  2, 5,  1, 5,  0, 5,  0, 4
+};
+// El pasillo de cada color (columna, fila) para las posiciones 28 y 29
+int[][] PQ_DIAG = {
+  {1, 4, 2, 4},
+  {4, 1, 4, 2},
+  {7, 4, 6, 4},
+  {4, 7, 4, 6}
+};
+// Centro de la cárcel de cada jugador (en el círculo de su esquina) y dónde quedan las fichas en la meta
+float[][] PQ_CARCEL = {{560, 210}, {1040, 210}, {1040, 690}, {560, 690}};
+float[][] PQ_EN_META = {{752, 450}, {800, 402}, {848, 450}, {800, 498}};
+// Corrimiento (x, y) de cada ficha cuando hay varias en la misma casilla
+int[] PQ_APILAR = {0, 0, -16, -16, 16, -16, -16, 16, 16, 16, 0, -18, 0, 18, -18, 0};
+
+int[][] pqPos = new int[PQ_J][PQ_F];   // -1 cárcel, 0..34 camino, 35 meta (contado desde la salida de cada uno)
+int pqTurno = 0;
+final int PQ_TIRAR = 0, PQ_MOVER = 1, PQ_FIN = 2;
+int pqFase = PQ_TIRAR;
+int pqD1 = 1, pqD2 = 1;
+boolean pqUsado1 = false, pqUsado2 = false;
+int pqSelDado = 1;                     // dado escogido por ti (1 o 2)
+int pqPares = 0;                       // pares seguidos en este turno
+int pqIntentos = 0;                    // intentos para salir de la cárcel
+int pqEspera = 0;                      // cuadros antes de la siguiente acción de un bot
+int pqGanador = -1;
+String[] pqLog = new String[4];
+int pqDesde = 0;
+int resPqCol, resPqFila;
+PImage pqImgFondo, pqImgTablero, pqImgFichas, pqImgDados;
+boolean pqSpritesBuscados = false;
+String[] pqBotNombre = new String[8];
+PImage[] pqBotImg = new PImage[8];
+int pqBotN = 0;
+
+
+// ---------------------------------------------------------------------
+//  Entrar, empezar y salir
+// ---------------------------------------------------------------------
+void iniciarParques() {
+  if (!pqSpritesBuscados) {
+    pqSpritesBuscados = true;
+    pqImgFondo = cargarSiExiste("minijuegos/parques/fondo.png");
+    pqImgTablero = cargarSiExiste("minijuegos/parques/tablero.png");
+    pqImgFichas = cargarSiExiste("minijuegos/parques/fichas.png");
+    pqImgDados = cargarSiExiste("minijuegos/parques/dados.png");
+  }
+  teclaIzq = false;
+  teclaDer = false;
+  cel = 0;
+  pqDesde = millis();
+  pqEmpezar();
+  screen = 7;
+  cargado = 0;
+}
+
+void pqEmpezar() {
+  for (int j = 0; j < PQ_J; j++) for (int f = 0; f < PQ_F; f++) pqPos[j][f] = -1;
+  for (int i = 0; i < pqLog.length; i++) pqLog[i] = "";
+  pqTurno = 0;
+  pqFase = PQ_TIRAR;
+  pqPares = 0;
+  pqIntentos = 0;
+  pqGanador = -1;
+  pqEspera = 0;
+  pqAnotar("Empieza la partida. Te toca: tira los dados.");
+}
+
+void salirParques() {
+  int quieto = millis() - pqDesde;
+  pqDesde = 0;
+  desplazarTiempos(quieto);
+  avanzarTiempo(min(60, 10 + quieto / 20000));
+  String r = "";
+  if (pqGanador == 0) {
+    r = aplicarEfectos("Social +2 · Energía +2", -1);
+    sumarBandera("PARQUES_GANADOS", 1);
+  } else if (pqGanador > 0) {
+    r = aplicarEfectos("Social +1", -1);
+  }
+  String m = "Dejas el parqués.";
+  if (pqGanador == 0) m = "¡Le ganaste a la familia en el parqués!";
+  else if (pqGanador > 0) m = PQ_NOMBRE[pqGanador] + " ganó el parqués. Te piden la revancha.";
+  if (r.equals("")) aviso(m); else aviso(m + "  (" + r + ")");
+  screen = 1;
+  cargado = 0;
+}
+
+// Agrega una línea al registro de lo que pasó (las más nuevas abajo)
+void pqAnotar(String t) {
+  for (int i = 1; i < pqLog.length; i++) pqLog[i - 1] = pqLog[i];
+  pqLog[pqLog.length - 1] = t;
+}
+
+
+// ---------------------------------------------------------------------
+//  El tablero
+// ---------------------------------------------------------------------
+
+// Columna y fila de la casilla i del camino
+void pqCasillaBorde(int i) {
+  resPqCol = PQ_CAMINO[2 * i];
+  resPqFila = PQ_CAMINO[2 * i + 1];
+}
+
+// Casilla absoluta del borde donde está una ficha (-1 si está en la cárcel, la diagonal o la meta)
+int pqAbsoluta(int j, int r) {
+  if (r < 0 || r >= PQ_LOOP) return -1;
+  return (j * 7 + r) % PQ_LOOP;
+}
+
+// ¿Es seguro? (las salidas y las estrellas: 2 y 5 casillas después de cada salida)
+boolean pqSeguro(int a) {
+  int k = a % 7;
+  return k == 0 || k == 2 || k == 5;
+}
+
+// Columna y fila donde se dibuja la ficha del jugador j con posición r (en resPqCol, resPqFila)
+void pqCasillaFicha(int j, int r) {
+  if (r >= PQ_META) { resPqCol = 4; resPqFila = 4; return; }
+  if (r >= PQ_LOOP) {
+    int k = r - PQ_LOOP;
+    resPqCol = PQ_DIAG[j][k * 2];
+    resPqFila = PQ_DIAG[j][k * 2 + 1];
+    return;
+  }
+  pqCasillaBorde(pqAbsoluta(j, r));
+}
+
+
+// ---------------------------------------------------------------------
+//  Reglas
+// ---------------------------------------------------------------------
+boolean pqPuedeMover(int j, int f, int d) {
+  int r = pqPos[j][f];
+  return r >= 0 && r < PQ_META && r + d <= PQ_META;
+}
+
+boolean pqHayJugada(int j, int d) {
+  for (int f = 0; f < PQ_F; f++) if (pqPuedeMover(j, f, d)) return true;
+  return false;
+}
+
+int pqPresas(int j) {
+  int n = 0;
+  for (int f = 0; f < PQ_F; f++) if (pqPos[j][f] == -1) n++;
+  return n;
+}
+int pqEnMeta(int j) {
+  int n = 0;
+  for (int f = 0; f < PQ_F; f++) if (pqPos[j][f] == PQ_META) n++;
+  return n;
+}
+// ¿Tiene alguna ficha que se pueda mover (ni presa ni en la meta)?
+boolean pqTieneEnJuego(int j) {
+  for (int f = 0; f < PQ_F; f++) if (pqPos[j][f] >= 0 && pqPos[j][f] < PQ_META) return true;
+  return false;
+}
+
+// Tira los dados del jugador del turno y decide qué pasa
+void pqTirar() {
+  pqD1 = int(random(1, 7));
+  pqD2 = int(random(1, 7));
+  pqUsado1 = false;
+  pqUsado2 = false;
+  boolean pares = pqD1 == pqD2;
+  String quien = PQ_NOMBRE[pqTurno];
+  if (pares) pqPares++;
+  // pares con fichas presas: salen todas
+  if (pares && pqPresas(pqTurno) > 0) {
+    int n = pqPresas(pqTurno);
+    for (int f = 0; f < PQ_F; f++) if (pqPos[pqTurno][f] == -1) pqPos[pqTurno][f] = 0;
+    pqAnotar(quien + " sacó pares de " + pqD1 + " y salen " + n + " fichas de la cárcel.");
+    pqIntentos = 0;
+    pqUsado1 = true;
+    pqUsado2 = true;
+    pqFinDeJugadas();
+    return;
+  }
+  // sin fichas en juego: intentos para sacar pares
+  if (!pqTieneEnJuego(pqTurno)) {
+    pqIntentos++;
+    if (pqIntentos < 3) {
+      pqAnotar(quien + ": " + pqD1 + " y " + pqD2 + ". Sin pares (intento " + pqIntentos + " de 3).");
+      pqFase = PQ_TIRAR;
+    } else {
+      pqAnotar(quien + ": " + pqD1 + " y " + pqD2 + ". Sin pares: pierde el turno.");
+      pqSiguienteTurno();
+    }
+    return;
+  }
+  pqAnotar(quien + " sacó " + pqD1 + " y " + pqD2 + ".");
+  pqFase = PQ_MOVER;
+  pqSelDado = 1;
+  if (!pqHayJugada(pqTurno, pqD1)) pqSelDado = 2;
+  pqRevisarSinJugadas();
+}
+
+// Si ya no se puede usar ningún dado, termina las jugadas del turno
+void pqRevisarSinJugadas() {
+  boolean puede1 = !pqUsado1 && pqHayJugada(pqTurno, pqD1);
+  boolean puede2 = !pqUsado2 && pqHayJugada(pqTurno, pqD2);
+  if (!puede1 && !puede2) {
+    if (!pqUsado1 || !pqUsado2) pqAnotar(PQ_NOMBRE[pqTurno] + " no puede mover más.");
+    pqFinDeJugadas();
+  } else {
+    if (pqSelDado == 1 && !puede1) pqSelDado = 2;
+    if (pqSelDado == 2 && !puede2) pqSelDado = 1;
+  }
+}
+
+// Mueve la ficha f del jugador del turno con el dado (1 o 2). Si cae sobre otros, se los come.
+void pqMover(int f, int dado) {
+  int j = pqTurno;
+  int d = pqD1;
+  if (dado == 2) d = pqD2;
+  if (!pqPuedeMover(j, f, d)) return;
+  pqPos[j][f] = pqPos[j][f] + d;
+  if (dado == 1) pqUsado1 = true; else pqUsado2 = true;
+  int r = pqPos[j][f];
+  if (r == PQ_META) pqAnotar(PQ_NOMBRE[j] + " metió una ficha en la meta.");
+  int a = pqAbsoluta(j, r);
+  if (a >= 0 && !pqSeguro(a)) {
+    for (int o = 0; o < PQ_J; o++) {
+      if (o != j) {
+        for (int g = 0; g < PQ_F; g++) {
+          if (pqAbsoluta(o, pqPos[o][g]) == a) {
+            pqPos[o][g] = -1;
+            pqAnotar(PQ_NOMBRE[j] + " se comió una ficha de " + PQ_NOMBRE[o] + ".");
+          }
+        }
+      }
+    }
+  }
+  if (pqEnMeta(j) == PQ_F) {
+    pqGanador = j;
+    pqFase = PQ_FIN;
+    if (j == 0) pqAnotar("¡Ganaste!"); else pqAnotar("Ganó " + PQ_NOMBRE[j] + ".");
+    return;
+  }
+  pqRevisarSinJugadas();
+}
+
+// Se acabaron los dados: con pares vuelve a tirar (hasta 3 veces); si no, pasa el turno
+void pqFinDeJugadas() {
+  if (pqFase == PQ_FIN) return;
+  if (pqD1 == pqD2 && pqPares < 3) {
+    pqFase = PQ_TIRAR;
+    pqAnotar(PQ_NOMBRE[pqTurno] + " sacó pares: vuelve a tirar.");
+  } else {
+    pqSiguienteTurno();
+  }
+  pqEspera = 40;
+}
+
+void pqSiguienteTurno() {
+  pqTurno = (pqTurno + 1) % PQ_J;
+  pqFase = PQ_TIRAR;
+  pqPares = 0;
+  pqIntentos = 0;
+  pqEspera = 40;
+}
+
+
+// ---------------------------------------------------------------------
+//  Los bots: reglas fijas. Cada uno le pone puntos a cada jugada posible y hace la de más puntos.
+// ---------------------------------------------------------------------
+int pqPuntajeJugada(int j, int f, int d) {
+  int r = pqPos[j][f], nr = r + d;
+  int a = pqAbsoluta(j, nr);
+  int p = 0;
+  boolean come = false;
+  if (a >= 0 && !pqSeguro(a)) {
+    for (int o = 0; o < PQ_J; o++) {
+      if (o != j) for (int g = 0; g < PQ_F; g++) if (pqAbsoluta(o, pqPos[o][g]) == a) come = true;
+    }
+  }
+  // ¿queda en peligro? (alguien la puede alcanzar con 1 a 12)
+  boolean peligro = false;
+  if (a >= 0 && !pqSeguro(a)) {
+    for (int o = 0; o < PQ_J; o++) {
+      if (o != j) {
+        for (int g = 0; g < PQ_F; g++) {
+          int ao = pqAbsoluta(o, pqPos[o][g]);
+          if (ao >= 0) {
+            int dist = (a - ao + PQ_LOOP) % PQ_LOOP;
+            if (dist >= 1 && dist <= 12) peligro = true;
+          }
+        }
+      }
+    }
+  }
+  boolean estabaSegura = pqAbsoluta(j, r) >= 0 && pqSeguro(pqAbsoluta(j, r));
+  if (j == 1) {                          // Lili, agresiva
+    if (come) p = p + 100;
+    if (peligro) p = p - 10;
+    p = p + d;
+  } else if (j == 2) {                   // Papá, cuidadoso
+    if (come) p = p + 40;
+    if (a >= 0 && pqSeguro(a)) p = p + 50;
+    if (nr >= PQ_LOOP) p = p + 45;
+    if (peligro) p = p - 60;
+    if (estabaSegura && peligro) p = p - 30;
+    p = p + d / 2;
+  } else {                               // abuela Nena, corredora
+    if (come) p = p + 30;
+    if (peligro) p = p - 20;
+    p = p + nr;
+  }
+  if (nr == PQ_META) p = p + 80;
+  return p;
+}
+
+// Un paso del bot: tira, o hace su mejor jugada con uno de los dados
+void pqPasoBot() {
+  if (pqFase == PQ_TIRAR) { pqTirar(); return; }
+  if (pqFase != PQ_MOVER) return;
+  int mejorF = -1, mejorDado = 0, mejorP = -9999;
+  for (int dado = 1; dado <= 2; dado++) {
+    boolean usado = pqUsado1;
+    int d = pqD1;
+    if (dado == 2) { usado = pqUsado2; d = pqD2; }
+    if (!usado) {
+      for (int f = 0; f < PQ_F; f++) {
+        if (pqPuedeMover(pqTurno, f, d)) {
+          int p = pqPuntajeJugada(pqTurno, f, d);
+          if (p > mejorP) { mejorP = p; mejorF = f; mejorDado = dado; }
+        }
+      }
+    }
+  }
+  if (mejorF >= 0) pqMover(mejorF, mejorDado); else pqFinDeJugadas();
+}
+
+// Si a ti solo te queda una jugada posible, devuelve ficha * 10 + dado; si hay varias o ninguna, -1.
+// (con pares, los dos dados valen lo mismo y cuentan como una sola opción)
+int pqJugadaUnica() {
+  int encontrada = -1, n = 0;
+  for (int dado = 1; dado <= 2; dado++) {
+    boolean usado = pqUsado1;
+    int d = pqD1;
+    if (dado == 2) { usado = pqUsado2; d = pqD2; }
+    boolean repetido = dado == 2 && !pqUsado1 && pqD1 == pqD2;
+    if (!usado && !repetido) {
+      for (int f = 0; f < PQ_F; f++) {
+        if (pqPuedeMover(0, f, d)) {
+          n++;
+          encontrada = f * 10 + dado;
+        }
+      }
+    }
+  }
+  if (n == 1) return encontrada;
+  return -1;
+}
+
+int pqAutoEspera = 0;
+
+// Cada cuadro: si le toca a un bot, actúa con una pausa para que se vea.
+// Si te toca a ti y solo tienes una jugada posible, la hace sola (después de un momento para que la veas).
+void actualizarParques() {
+  if (pqFase == PQ_FIN) return;
+  if (pqTurno == 0) {
+    if (pqFase != PQ_MOVER) { pqAutoEspera = 30; return; }
+    int u = pqJugadaUnica();
+    if (u < 0) { pqAutoEspera = 30; return; }
+    pqAutoEspera = pqAutoEspera - pasoCuadro;
+    if (pqAutoEspera <= 0) {
+      pqAutoEspera = 30;
+      pqMover(u / 10, u % 10);
+    }
+    return;
+  }
+  pqEspera = pqEspera - pasoCuadro;
+  if (pqEspera > 0) return;
+  pqEspera = 35;
+  pqPasoBot();
+}
+
+
+// ---------------------------------------------------------------------
+//  Dibujo
+// ---------------------------------------------------------------------
+PImage pqImagenBoton(String nombre) {
+  for (int i = 0; i < pqBotN; i++) if (pqBotNombre[i].equals(nombre)) return pqBotImg[i];
+  if (pqBotN >= pqBotNombre.length) return null;
+  pqBotNombre[pqBotN] = nombre;
+  pqBotImg[pqBotN] = cargarSiExiste("minijuegos/parques/botones/" + nombre + ".png");
+  pqBotN++;
+  return pqBotImg[pqBotN - 1];
+}
+
+// Botón con sprite (sube 2 px con el mouse encima, gris si no se puede usar); sin sprite, rectángulo con texto.
+void pqBoton(String img, float x, float y, float w, float h, String t, int c, boolean activo, float tam) {
+  noStroke();
+  boolean encima = activo && mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+  PImage b = pqImagenBoton(img);
+  float sube = 0;
+  if (encima) sube = 2;
+  if (hay(b)) {
+    if (!activo) tint(140);
+    image(b, x, y - sube, w, h);
+    noTint();
+    return;
+  }
+  if (!activo) fill(120, 120, 130);
+  else if (encima) fill(lerpColor(c, color(255), 0.2));
+  else fill(c);
+  rect(x, y - sube, w, h, 10);
+  fill(255);
+  textAlign(CENTER, CENTER);
+  textSize(tam);
+  text(t, x + w / 2, y - sube + h / 2 - 2);
+}
+
+boolean pqDentro(float x, float y, float w, float h) {
+  return mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+}
+
+void dibujarParques() {
+  if (hay(pqImgFondo)) image(pqImgFondo, 0, 0, ANCHO, ALTO);
+  else background(52, 40, 34);
+  noStroke();
+  fill(20, 16, 14, 220);
+  rect(0, 0, ANCHO, 64);
+  fill(255);
+  textAlign(LEFT, CENTER);
+  textSize(24);
+  text("Parqués en familia", 24, 32);
+  pqBoton("salir", 1430, 10, 150, 44, "Salir", color(170, 70, 60), true, 19);
+
+  pqDibujarTablero();
+  pqDibujarFichas();
+  pqDibujarJugadores();
+  pqDibujarDados();
+  if (pqFase == PQ_FIN) pqDibujarFinal();
+  textAlign(LEFT, BASELINE);
+  strokeWeight(1);
+  noStroke();
+}
+
+void pqDibujarTablero() {
+  if (hay(pqImgTablero)) { image(pqImgTablero, PQ_BX, PQ_BY, 9 * PQ_CEL, 9 * PQ_CEL); return; }
+  // sin sprite: la cruz dibujada con rectángulos
+  noStroke();
+  fill(235, 222, 196);
+  rect(PQ_BX - 8, PQ_BY - 8, 9 * PQ_CEL + 16, 9 * PQ_CEL + 16, 12);
+  float[][] esquina = {{0, 0}, {6, 0}, {6, 6}, {0, 6}};
+  for (int j = 0; j < PQ_J; j++) {
+    int[] c = PQ_COLOR[j];
+    fill(c[0], c[1], c[2]);
+    rect(PQ_BX + esquina[j][0] * PQ_CEL, PQ_BY + esquina[j][1] * PQ_CEL, 3 * PQ_CEL, 3 * PQ_CEL);
+    fill(255, 255, 255, 170);
+    ellipse(PQ_CARCEL[j][0], PQ_CARCEL[j][1], 150, 150);
+  }
+  stroke(120, 100, 80);
+  strokeWeight(2);
+  for (int i = 0; i < PQ_LOOP; i++) {
+    pqCasillaBorde(i);
+    float x = PQ_BX + resPqCol * PQ_CEL, y = PQ_BY + resPqFila * PQ_CEL;
+    if (i % 7 == 0) { int[] c = PQ_COLOR[i / 7]; fill(c[0], c[1], c[2]); }
+    else fill(250, 245, 232);
+    rect(x, y, PQ_CEL, PQ_CEL);
+    if (pqSeguro(i) && i % 7 != 0) {
+      noStroke();
+      fill(200, 170, 90);
+      ellipse(x + PQ_CEL / 2, y + PQ_CEL / 2, 30, 30);
+      stroke(120, 100, 80);
+    }
+  }
+  for (int j = 0; j < PQ_J; j++) {
+    int[] c = PQ_COLOR[j];
+    fill(lerpColor(color(c[0], c[1], c[2]), color(255), 0.45));
+    for (int k = 0; k < 2; k++) rect(PQ_BX + PQ_DIAG[j][k * 2] * PQ_CEL, PQ_BY + PQ_DIAG[j][k * 2 + 1] * PQ_CEL, PQ_CEL, PQ_CEL);
+  }
+  fill(255, 240, 200);
+  rect(PQ_BX + 3 * PQ_CEL, PQ_BY + 3 * PQ_CEL, 3 * PQ_CEL, 3 * PQ_CEL);
+  noStroke();
+  strokeWeight(1);
+  fill(120, 90, 50);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  text("META", PQ_BX + 4.5 * PQ_CEL, PQ_BY + 4.5 * PQ_CEL);
+}
+
+// Una ficha del jugador j centrada en (x, y)
+void pqDibujarFicha(int j, float x, float y, float lado, boolean resaltada) {
+  if (resaltada) {
+    noStroke();
+    fill(255, 255, 255, 120 + 80 * sin(cuadros * 0.2));
+    ellipse(x, y, lado + 14, lado + 14);
+  }
+  if (hay(pqImgFichas)) { dibujarHoja(pqImgFichas, 48, 48, 0, j, x - lado / 2, y - lado / 2, lado / 48.0); return; }
+  int[] c = PQ_COLOR[j];
+  stroke(40);
+  strokeWeight(3);
+  fill(c[0], c[1], c[2]);
+  ellipse(x, y, lado, lado);
+  noStroke();
+  fill(255, 255, 255, 120);
+  ellipse(x - lado * 0.15, y - lado * 0.15, lado * 0.3, lado * 0.3);
+  strokeWeight(1);
+}
+
+// ¿Esta ficha tuya se puede mover con el dado escogido? (para resaltarla)
+boolean pqFichaMovible(int f) {
+  if (pqTurno != 0 || pqFase != PQ_MOVER) return false;
+  int d = pqD1;
+  if (pqSelDado == 2) d = pqD2;
+  boolean usado = pqUsado1;
+  if (pqSelDado == 2) usado = pqUsado2;
+  return !usado && pqPuedeMover(0, f, d);
+}
+
+// x, y de la ficha f del jugador j (con un corrimiento si hay varias en la misma casilla)
+float resPqX, resPqY;
+void pqPosicionFicha(int j, int f) {
+  int r = pqPos[j][f];
+  if (r == -1) {
+    resPqX = PQ_CARCEL[j][0] - 24 + (f % 2) * 56;
+    resPqY = PQ_CARCEL[j][1] - 25 + (f / 2) * 56;
+    return;
+  }
+  if (r == PQ_META) {
+    resPqX = PQ_EN_META[j][0] - 9 + (f % 2) * 18;
+    resPqY = PQ_EN_META[j][1] - 9 + (f / 2) * 18;
+    return;
+  }
+  pqCasillaFicha(j, r);
+  // cuántas fichas hay antes en la misma casilla (para no taparlas)
+  int antes = 0;
+  for (int o = 0; o < PQ_J; o++) {
+    for (int g = 0; g < PQ_F; g++) {
+      if ((o < j || (o == j && g < f)) && pqPos[o][g] >= 0 && pqPos[o][g] < PQ_META) {
+        int col = resPqCol, fila = resPqFila;
+        pqCasillaFicha(o, pqPos[o][g]);
+        if (resPqCol == col && resPqFila == fila) antes++;
+        resPqCol = col;
+        resPqFila = fila;
+      }
+    }
+  }
+  // la primera va en el centro de la casilla; las que llegan después, alrededor
+  int k = antes % 8;
+  resPqX = PQ_BX + resPqCol * PQ_CEL + PQ_CEL / 2 + PQ_APILAR[2 * k];
+  resPqY = PQ_BY + resPqFila * PQ_CEL + PQ_CEL / 2 + PQ_APILAR[2 * k + 1];
+}
+
+void pqDibujarFichas() {
+  pqDibujarDestino();
+  for (int j = 0; j < PQ_J; j++) {
+    for (int f = 0; f < PQ_F; f++) {
+      pqPosicionFicha(j, f);
+      float lado = 42;
+      if (pqPos[j][f] >= 0) lado = 34;
+      if (pqPos[j][f] == PQ_META) lado = 22;
+      pqDibujarFicha(j, resPqX, resPqY, lado, j == 0 && pqFichaMovible(f));
+    }
+  }
+}
+
+// Si el mouse está sobre una de tus fichas que se puede mover, marca la casilla a donde llegaría.
+void pqDibujarDestino() {
+  if (pqTurno != 0 || pqFase != PQ_MOVER) return;
+  int d = pqD1;
+  if (pqSelDado == 2) d = pqD2;
+  for (int f = 0; f < PQ_F; f++) {
+    if (pqFichaMovible(f)) {
+      pqPosicionFicha(0, f);
+      if (dist(mouseX, mouseY, resPqX, resPqY) < 24) {
+        int nr = pqPos[0][f] + d;
+        float x, y;
+        if (nr >= PQ_META) { x = PQ_EN_META[0][0]; y = PQ_EN_META[0][1]; }
+        else {
+          pqCasillaFicha(0, nr);
+          x = PQ_BX + resPqCol * PQ_CEL + PQ_CEL / 2;
+          y = PQ_BY + resPqFila * PQ_CEL + PQ_CEL / 2;
+        }
+        noFill();
+        stroke(255, 230, 80);
+        strokeWeight(4);
+        rect(x - 36, y - 36, 72, 72, 10);
+        noStroke();
+        strokeWeight(1);
+        int[] c = PQ_COLOR[0];
+        fill(c[0], c[1], c[2], 110);
+        ellipse(x, y, 34, 34);
+      }
+    }
+  }
+}
+
+// Panel de la izquierda: los jugadores
+void pqDibujarJugadores() {
+  noStroke();
+  fill(250, 244, 232, 235);
+  rect(40, 280, 380, 350, 14);
+  for (int j = 0; j < PQ_J; j++) {
+    float y = 296 + j * 82;
+    if (j == pqTurno && pqFase != PQ_FIN) {
+      fill(255, 230, 150);
+      rect(50, y - 6, 360, 76, 10);
+    }
+    pqDibujarFicha(j, 80, y + 22, 32, false);
+    fill(40);
+    textAlign(LEFT, TOP);
+    textSize(20);
+    text(PQ_NOMBRE[j], 108, y);
+    textSize(13);
+    fill(90);
+    if (j == 0) text("Tus fichas son las amarillas", 108, y + 26);
+    else text(PQ_ESTILO[j], 108, y + 26);
+    text("En la meta: " + pqEnMeta(j) + " de 4  ·  presas: " + pqPresas(j), 108, y + 44);
+  }
+}
+
+// Panel de la derecha: dados, botón de tirar y lo que ha pasado
+void pqDibujarDados() {
+  noStroke();
+  fill(250, 244, 232, 235);
+  rect(1180, 280, 380, 350, 14);
+  fill(40);
+  textAlign(LEFT, TOP);
+  textSize(20);
+  if (pqFase == PQ_FIN) text("Partida terminada", 1200, 292);
+  else if (pqTurno == 0) text("Tu turno", 1200, 292);
+  else text("Turno de " + PQ_NOMBRE[pqTurno], 1200, 292);
+  for (int k = 1; k <= 2; k++) {
+    int v = pqD1;
+    boolean usado = pqUsado1;
+    if (k == 2) { v = pqD2; usado = pqUsado2; }
+    float x = 1200 + (k - 1) * 110, y = 330;
+    boolean sel = pqTurno == 0 && pqFase == PQ_MOVER && pqSelDado == k && !usado;
+    if (sel) { fill(255, 200, 60); rect(x - 6, y - 6, 102, 102, 14); }
+    if (usado && pqFase == PQ_MOVER) tint(150);
+    if (hay(pqImgDados)) dibujarHoja(pqImgDados, 90, 90, 0, v - 1, x, y, 1);
+    else pqDado(x, y, v, usado && pqFase == PQ_MOVER);
+    noTint();
+  }
+  fill(90);
+  textSize(14);
+  if (pqTurno == 0 && pqFase == PQ_MOVER) text("Escoge un dado y luego la ficha\nque brilla.", 1420, 340);
+  pqBoton("tirar", 1200, 440, 340, 70, "Tirar dados", color(60, 150, 90), pqTurno == 0 && pqFase == PQ_TIRAR, 24);
+  // lo último que pasó
+  fill(60);
+  textSize(13);
+  textAlign(LEFT, TOP);
+  for (int i = 0; i < pqLog.length; i++) text(pqLog[i], 1194, 522 + i * 26, 356, 26);
+}
+
+// Un dado dibujado con puntos
+void pqDado(float x, float y, int v, boolean apagado) {
+  noStroke();
+  if (apagado) fill(200); else fill(255);
+  rect(x, y, 90, 90, 14);
+  fill(40);
+  float c = 45, o = 24;
+  if (v % 2 == 1) ellipse(x + c, y + c, 16, 16);
+  if (v >= 2) { ellipse(x + c - o, y + c - o, 16, 16); ellipse(x + c + o, y + c + o, 16, 16); }
+  if (v >= 4) { ellipse(x + c + o, y + c - o, 16, 16); ellipse(x + c - o, y + c + o, 16, 16); }
+  if (v == 6) { ellipse(x + c - o, y + c, 16, 16); ellipse(x + c + o, y + c, 16, 16); }
+}
+
+void pqDibujarFinal() {
+  noStroke();
+  fill(0, 0, 0, 150);
+  rect(0, 64, ANCHO, ALTO - 64);
+  fill(250, 244, 232);
+  rect(500, 300, 600, 300, 18);
+  fill(40);
+  textAlign(CENTER, CENTER);
+  textSize(42);
+  if (pqGanador == 0) text("¡Ganaste!", 800, 370); else text("Ganó " + PQ_NOMBRE[pqGanador], 800, 370);
+  textSize(20);
+  fill(90);
+  text("Metiste " + pqEnMeta(0) + " de tus 4 fichas.", 800, 430);
+  pqBoton("volver", 640, 490, 320, 80, "Volver al juego", color(60, 150, 90), true, 24);
+}
+
+
+// ---------------------------------------------------------------------
+//  Mouse
+// ---------------------------------------------------------------------
+void clickParques() {
+  if (pqDentro(1430, 10, 150, 44)) { salirParques(); return; }
+  if (pqFase == PQ_FIN) {
+    if (pqDentro(640, 490, 320, 80)) salirParques();
+    return;
+  }
+  if (pqTurno != 0) return;
+  if (pqFase == PQ_TIRAR) {
+    if (pqDentro(1200, 440, 340, 70)) pqTirar();
+    return;
+  }
+  // escoger dado
+  for (int k = 1; k <= 2; k++) {
+    float x = 1200 + (k - 1) * 110;
+    boolean usado = pqUsado1;
+    if (k == 2) usado = pqUsado2;
+    if (pqDentro(x, 330, 90, 90) && !usado) { pqSelDado = k; return; }
+  }
+  // escoger ficha
+  for (int f = 0; f < PQ_F; f++) {
+    pqPosicionFicha(0, f);
+    if (dist(mouseX, mouseY, resPqX, resPqY) < 24 && pqFichaMovible(f)) { pqMover(f, pqSelDado); return; }
+  }
+}
+
+
 // ============================ FÚTBOL: PENALES Y PASES LARGOS ============================
 // 5 penales: haz click en la parte del arco donde quieres patear y luego ESPACIO para la fuerza
 // (verde = fuerte, amarillo = suave, rojo = se va por encima). El portero adivina más en cada tiro.
@@ -13137,7 +17826,6 @@ String[][] OBJ_ACCIONES = {
   {"Entrar a la parte oscura", "VICIO +1 · Energía −5 · Social +2 · Tiempo +60 min", "La música está a todo volumen. Sales una hora después con el oído zumbando."},
   {"Buscar a Tuerca", "Tuerca +2 · Tiempo +10 min", "Tuerca no está en el tronco... ah, sí: te mira desde una rama."},
   {"Mirar el lago", "Energía +4 · Tiempo +15 min", "Te quedas mirando el lago. Por un rato no piensas en nada."},
-  {"Jugar ajedrez", "Notas +1 · Tiempo +30 min", "Juegas una partida contra ti mismo. Ganas. También pierdes."},
   {"Información", "", "INFO: Grano Café, PixelZone, Rosa Moda y Heladería. Los baños, al fondo."},
   {"Probarse la chaqueta", "Social +1 · Tiempo +10 min", "Te queda bien. Doña Rosa asiente desde el mostrador."},
   {"Hablar con Don Ramiro", "Don Ramiro +2", "Don Ramiro: “Buenas, joven. Hoy entró mucha gente sin carné.”"}
@@ -13145,9 +17833,13 @@ String[][] OBJ_ACCIONES = {
 
 // Devuelve true si la acción estaba en la tabla
 boolean accionDeObjeto(String a) {
+  if (a.equals("Jugar ajedrez")) {
+    hecho("AJEDREZ");
+    iniciarAjedrez();
+    return true;
+  }
   for (int k = 0; k < OBJ_ACCIONES.length; k++) {
     if (OBJ_ACCIONES[k][0].equals(a)) {
-      if (a.equals("Jugar ajedrez")) hecho("AJEDREZ");
       if (a.equals("Comer algo")) empezarAComer();
       String ef = OBJ_ACCIONES[k][1];
       int it = posicionDe(ef, "Ítem ");
@@ -18561,7 +23253,9 @@ String[][] LOGROS = {
   {"Cero faltas", "Asiste a 12 clases.", "ASIST>=12"},
   {"Honesto", "Di la verdad cuando costaba.", "HONESTO"},
   {"Semestre aprobado", "Pasa todas las materias.", "GRADUADO"},
-  {"Diez días", "Termina la historia.", "JUEGO_TERMINADO"}
+  {"Diez días", "Termina la historia.", "JUEGO_TERMINADO"},
+  {"Garry Kasparov", "Gánale a la máquina en el ajedrez del parque, como Kasparov a Deep Blue en 1996.", "AJEDREZ_GANADAS"},
+  {"Entrenador de IAs", "Gana los 3 niveles de ModerIA.", "IA_GANO_2"}
 };
 boolean[] logroHecho = new boolean[LOGROS.length];
 int logroNuevo = -1, logroNuevoHasta = 0;
@@ -18612,7 +23306,7 @@ boolean iconosLogrosBuscados = false;
 // Dibuja la medalla de un logro con su ícono (o con figuras).
 void dibujarMedallaLogro(int i, float x, float y, float d, boolean hecha) {
   if (!iconosLogrosBuscados) { iconosLogrosBuscados = true; iconosLogros = cargarSiExiste("extras/interfaz/logros/iconos_logros.png"); }
-  if (i < 0 || !hay(iconosLogros)) { dibujarMedalla(x, y, d, hecha); return; }
+  if (i < 0 || !hay(iconosLogros) || (i / 8) * 80 + 80 > iconosLogros.height) { dibujarMedalla(x, y, d, hecha); return; }
   float t = d * 1.5;
   if (!hecha) tint(110, 110, 120, 150);
   image(iconosLogros, x - t / 2, y - t / 2, t, t, (i % 8) * 80, (i / 8) * 80, (i % 8) * 80 + 80, (i / 8) * 80 + 80);
@@ -18773,7 +23467,7 @@ void dibujarPausaResumen(float y) {
 // Dibuja la pestaña Logros de la pausa.
 void dibujarPausaLogros(float y) {
   int cols = 4;
-  float cw = 292, ch = 66;
+  float cw = 292, ch = min(66, 540.0 / ((LOGROS.length + cols - 1) / cols));
   for (int i = 0; i < LOGROS.length; i++) {
     float x = PZ_X + 30 + (i % cols) * cw, yy = y + (i / cols) * ch;
     boolean h = logroHecho[i];
@@ -20757,7 +25451,7 @@ boolean escenaVista(String id) {
 // Arranca una escena desde su primera fila
 void empezarEscena(String id) {
   int k = filaDeEscena(id, "");
-  if (k < 0) { println("No existe la escena " + id); return; }
+  if (k < 0) return;
   escId = id;
   escFila = k;
   scePersona = -1;
@@ -20888,7 +25582,7 @@ void saltarEscena(String etiqueta) {
   if (etiqueta == null || etiqueta.equals("")) { escFila++; return; }
   if (etiqueta.equals("FIN")) { escFila = -1; return; }
   int k = filaDeEscena(escId, etiqueta);
-  if (k < 0) { println("Escena " + escId + ": no existe la etiqueta " + etiqueta); escFila = -1; return; }
+  if (k < 0) { escFila = -1; return; }
   escFila = k;
 }
 
@@ -21131,9 +25825,15 @@ void dibujarNarracion(String t) {
   fill(235, 230, 210);
   textSize(28);
   textAlign(CENTER, CENTER);
-  text(sinCorchetes(t), CAJA_X + 60, CAJA_Y + 50, CAJA_W - 120, CAJA_H - 70);
+  // se limpia una sola vez por texto (no en cada cuadro)
+  if (narrEntrada == null || !narrEntrada.equals(t)) {
+    narrEntrada = t;
+    narrLimpia = sinCorchetes(t);
+  }
+  text(narrLimpia, CAJA_X + 60, CAJA_Y + 50, CAJA_W - 120, CAJA_H - 70);
   textAlign(LEFT, BASELINE);
 }
+String narrEntrada = null, narrLimpia = "";
 
 // Quita los corchetes de un texto como '[acción]'.
 String sinCorchetes(String t) {
@@ -22733,6 +27433,7 @@ void dibujarIconosCelular3() {
       text(APPS3_SIMBOLO[k], x + 40, y + 20);
     }
     fill(225, 225, 235);
+    textAlign(CENTER, TOP);
     textSize(15);
     text(APPS3[k], x + 40, y + 84);
     if (k == 1) burbujaRoja(x + 74, y + 6, diarioNuevas);
@@ -23778,7 +28479,7 @@ void dibujarAtencion() {
       atNy[i] = random(160, 700);
       break;
     }
-    atProxNotif = millis() + round(random(1800, 3200) / difMult);
+    atProxNotif = millis() + round(random(1800, 3200) / difMult * filtroModeria());
   }
   for (int i = 0; i < 4; i++) {
     if (atNviva[i]) {
@@ -26435,14 +31136,18 @@ void dibujarNotas() {
 }
 
 // ---------------------------- Mapa / ubicación compartida ----------------------------
-// El mapa de la ciudad: extras/interfaz/1_celular/mapa_ciudad.png (500x170). El punto va a la zona donde estás.
-// { letra de la zona, nombre, x, y } (x, y dentro del mapa de 500x170)
+// El mapa de la ciudad: extras/interfaz/1_celular/mapa_ciudad.png (se dibuja en 500x170). El punto va a donde estás.
+// { código del mapa o letra de la zona, nombre, x, y } (x, y dentro del mapa de 500x170)
+// Primero se busca el código completo (I2, I6...); si no está, la letra (C, U, P...).
 String[][] MAPA_ZONAS;
 // Llena la tabla MAPA_ZONAS (va en su propia función por el límite de 64 KB por método de Java)
 void datos_MAPA_ZONAS() {
   MAPA_ZONAS = new String[][] {
-  {"C", "Casa", "62", "118"}, {"I", "Transporte", "170", "92"}, {"U", "La U", "272", "54"},
-  {"P", "Plaza", "386", "108"}, {"K", "Parque", "446", "40"}, {"D", "Deportes", "330", "142"}, {"F", "Afuera", "214", "144"}
+  {"C", "Casa", "30", "80"}, {"I1", "En el bus", "118", "86"}, {"I7", "Terminal", "186", "108"},
+  {"P", "Plaza", "195", "20"}, {"I3", "Calle a la Plaza", "280", "58"}, {"U", "La U", "360", "38"},
+  {"I2", "Paradero de la U", "375", "73"}, {"I4", "Puente", "360", "100"}, {"I6", "Paradero del Parque", "342", "118"},
+  {"K", "Parque", "425", "135"}, {"I8", "Andén", "418", "52"}, {"F", "Esquina", "458", "48"},
+  {"I5", "Pasillo techado", "430", "15"}, {"D", "Deportes", "460", "10"}
   };
 }
 PImage mapaCiudad = null;
@@ -26472,18 +31177,26 @@ void dibujarMapaCel() {
       text(MAPA_ZONAS[i][1], mx + float(MAPA_ZONAS[i][2]) * mw / 500, my + float(MAPA_ZONAS[i][3]) + 8);
     }
   }
-  String zona = MAPA_COD[mapaActual].substring(0, 1);
+  String cod = MAPA_COD[mapaActual];
+  String zona = cod.substring(0, 1);
+  int k = -1;
   for (int i = 0; i < MAPA_ZONAS.length; i++) {
-    if (MAPA_ZONAS[i][0].equals(zona)) {
-      float px = mx + float(MAPA_ZONAS[i][2]) * mw / 500, py = my + float(MAPA_ZONAS[i][3]);
-      noStroke();
-      fill(50, 120, 220, 70);
-      ellipse(px, py, 40 + 8 * sin(cuadros * 0.1), 40 + 8 * sin(cuadros * 0.1));
-      fill(50, 120, 220);
-      ellipse(px, py, 22, 22);
-      fill(255);
-      ellipse(px, py, 8, 8);
+    if (MAPA_ZONAS[i][0].equals(cod)) k = i;
+  }
+  if (k == -1) {
+    for (int i = 0; i < MAPA_ZONAS.length; i++) {
+      if (MAPA_ZONAS[i][0].equals(zona)) k = i;
     }
+  }
+  if (k >= 0) {
+    float px = mx + float(MAPA_ZONAS[k][2]) * mw / 500, py = my + float(MAPA_ZONAS[k][3]);
+    noStroke();
+    fill(50, 120, 220, 70);
+    ellipse(px, py, 40 + 8 * sin(cuadros * 0.1), 40 + 8 * sin(cuadros * 0.1));
+    fill(50, 120, 220);
+    ellipse(px, py, 22, 22);
+    fill(255);
+    ellipse(px, py, 8, 8);
   }
   fill(40);
   textSize(20);
@@ -28280,11 +32993,10 @@ void leerDiario() {
         boolean seguir11 = true;
         if (c == '@') {
           p = personaIndice(quitarBordesProcessing(l.substring(1)));
-          if (p < 0) println("DIARIO: no existe la persona " + l);
         } else if (c == '#') {
           partirPorLetra(l.substring(1), '¦');
           String[] q = resPartirPorLetra;
-          if (q.length < 4) { println("DIARIO: línea mala " + l); seguir11 = false; }
+          if (q.length < 4) { seguir11 = false; }
           if (seguir11) {
             dNodoP[dN] = p;
             String num = quitarBordesProcessing(q[0]);
@@ -28301,7 +33013,7 @@ void leerDiario() {
         } else if (c == '>' && dN > 0) {
           partirPorLetra(l.substring(1), '¦');
           String[] q = resPartirPorLetra;
-          if (q.length < 4) { println("DIARIO: opción mala " + l); seguir11 = false; }
+          if (q.length < 4) { seguir11 = false; }
           if (seguir11) {
             dOpCond[dOpN] = quitarBordesProcessing(q[0]);
             dOpTexto[dOpN] = quitarBordesProcessing(q[1]);
@@ -32287,7 +36999,11 @@ String[][] AVISOS_MJ = {
   {"RUGBY", "Rugby (fútbol americano)", "Lleva el balón hasta la zona del rival.¦Con el balón, click para pasarlo; sin el balón, click para tacklear.", "W A S D para moverte · click.", "Anota más que el rival."},
   {"WORDLE", "Wordle", "Adivina la palabra de 5 letras en 6 intentos.¦Verde: la letra está en su lugar · amarillo: está, pero en otro lugar · azul: no está.", "Escribe y ENTER · BORRAR para corregir.", "Adivínala en pocos intentos."},
   {"FLAPPY", "Flappy", "Pasa por el hueco de los tubos sin chocarte ni caerte.", "Click para volar.", "Pasa todos los tubos que puedas."},
-  {"PONG", "Pong", "No dejes pasar la bola por tu lado.¦Cada click cambia la dirección en la que se mueve tu barra.", "Click.", "Devuelve todas las bolas que puedas."}
+  {"PONG", "Pong", "No dejes pasar la bola por tu lado.¦Cada click cambia la dirección en la que se mueve tu barra.", "Click.", "Devuelve todas las bolas que puedas."},
+  {"PARQUES", "Parqués en familia", "Tablero en cruz: das la vuelta y entras por el pasillo de tu color hasta la meta.¦Cada dado mueve una ficha. Pares sacan de la cárcel y dan otro tiro.¦Si caes sobre otro (fuera de los seguros), te lo comes.", "Tira los dados, escoge un dado y luego la ficha que brilla.", "Mete tus 4 fichas antes que Lili, Papá y la abuela."},
+  {"MODERIA", "ModerIA: entrena tu IA", "Le enseñas a una IA a moderar mensajes: tú dices qué es cada uno y ella aprende.¦Después la pruebas con mensajes que nunca vio.¦Ojo: si le enseñas mal, aprende mal.", "Click en los botones.", "Que acierte la meta de cada nivel."},
+  {"MODERADOR", "Moderador (tower defense)", "Spam, bots y haters bajan por el camino hacia tu feed.¦Pon torres en los círculos y mejóralas; en el nivel 5 escoges una de dos ramas.¦Cada nivel ganado abre el siguiente.", "Click en los círculos · ESPACIO pausa · N siguiente ola.", "Que no lleguen 20 a tu feed."},
+  {"AJEDREZ", "Ajedrez en el parque", "Juegas con las blancas contra el señor de las mesas.¦Él responde solo apenas mueves.¦Si nadie gana en 60 jugadas, son tablas.", "Click en tu pieza y luego en la casilla (o arrástrala).", "Ganar: Notas +2 y Social +1. Tablas: Notas +1 y Social +1."}
 };
 
 String avisoMJ = "";
@@ -35177,6 +39893,10 @@ boolean leerVariable7(String nombreG, String valorG) {
 // Corre d milisegundos todos los momentos guardados con millis(): así la pausa y el cartel
 // de cada minijuego no le quitan tiempo a nada (ni al reloj del juego, ni al minijuego)
 void desplazarTiempos(int corrimientoG) {
+  if (ajDesde > 0) ajDesde += corrimientoG;
+  if (tdDesde > 0) tdDesde += corrimientoG;
+  if (iaDesde > 0) iaDesde += corrimientoG;
+  if (pqDesde > 0) pqDesde += corrimientoG;
   if (actividadInicio > 0) actividadInicio += corrimientoG;
   if (agDesde > 0) agDesde += corrimientoG;
   if (atFin > 0) atFin += corrimientoG;

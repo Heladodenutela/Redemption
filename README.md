@@ -27,3 +27,4 @@ La carpeta tiene que llamarse `Redemption`, igual que el archivo `.pde`, o Proce
 | [`docs/manual_de_usuario.md`](docs/manual_de_usuario.md) | Cómo instalarlo y cómo se juega |
 | [`docs/manual_tecnico.md`](docs/manual_tecnico.md) | Cómo está hecho el código por dentro |
 | [`docs/funciones_generales.md`](docs/funciones_generales.md) | Cómo imitamos la tabla hash y las listas sin usar HashMap ni ArrayList |
+| [`entrenamiento_ajedrez/`](entrenamiento_ajedrez/) | Los programas en Python con los que entrenamos la red del bot de ajedrez (ver `LEEME.txt`) |

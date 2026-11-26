@@ -1,0 +1,30 @@
+ENTRENAMIENTO DEL BOT DE AJEDREZ
+
+Con estos dos archivos sacamos los pesos de la red que usa el bot del ajedrez del parque
+(el "señor de las mesas").
+
+PARA QUÉ SIRVE
+El bot no piensa varias jugadas adelante. Prueba cada jugada legal, mira cómo queda el
+tablero y le pregunta a la red qué tan buena es esa posición (de -1, ganan negras, a 1,
+ganan blancas). Juega la que le da mejor puntaje. La red es como su "instinto", y estos
+archivos son los que le enseñan ese instinto.
+
+QUÉ HACE CADA ARCHIVO
+- caracteristicas.py: convierte una posición (en formato FEN) en 9 números: material,
+  movilidad, centro, avance de peones, protección del rey, desarrollo, amenazas, espacio y
+  peones débiles. Calcula exactamente lo mismo que el juego en Processing. Si no diera lo
+  mismo, la red aprendería con unos números y jugaría con otros.
+- entrenar.py: lee 30.000 posiciones que ya evaluó un motor de ajedrez (muestra.jsonl),
+  pasa cada evaluación a un número entre -1 y 1 (tanh de los centipeones / 400; si hay
+  mate, 1 o -1) y entrena una red de 9 entradas, 16 y 8 perceptrones ocultos y 1 de salida,
+  todos con tanh. Los pesos se corrigen con retropropagación: el error de la salida se
+  pasa hacia atrás, capa por capa. Al final escribe pesos_processing.txt, listo para
+  pegar en el .pde.
+
+CÓMO SE CORRE
+  python entrenar.py
+Necesita muestra.jsonl en la misma carpeta. No lo subimos porque pesa mucho.
+
+LOS MODELOS DEL JUEGO
+En el juego se escoge contra qué modelo jugar. Cada modelo es un entrenamiento distinto
+con este programa (cambiando los datos): el 1 remata más y el 2 evalúa mejor pero se conforma con tablas.
