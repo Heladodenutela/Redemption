@@ -53,7 +53,7 @@ Redemption cumple los siete requisitos del código, usa las ocho mecánicas de l
 | Mecánica | En el juego |
 | --- | --- |
 | Sistema de puntos | `puntaje()`: Notas × 2 + Social × 2 + ejercicio + equilibrio − 40 por VICIO + 5 por logro |
-| Logros o insignias | 32 logros con medalla (`LOGROS`, `revisarLogros`) |
+| Logros o insignias | 34 logros con medalla (`LOGROS`, `revisarLogros`) |
 | Barra de bienestar digital | Las barras del HUD y la app Bienestar digital, que compara cada categoría con su rango sano |
 | Contador de tiempo de pantalla | `stats[ST_PANTALLA]` suma cada medio minuto con el celular abierto; `pantallaHist[]` lo guarda por día |
 | Reputación digital | Seguidores, likes, la bandera `MALA_REPUTACIÓN` y los chismes de «Confesiones Aurora» |
