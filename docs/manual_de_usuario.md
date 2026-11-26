@@ -511,7 +511,7 @@ Cuatro juegos ocupan toda la pantalla. Mientras juegas, el reloj y el resto del 
 
 **Ajedrez.** Juegas con las blancas contra el señor de las mesas.
 
-- Antes de empezar escoges contra qué modelo juegas: el **1 (El clásico)** remata más; el **2 (El preciso)** evalúa mejor pero se conforma con tablas.
+- Antes de empezar escoges contra qué modelo juegas: el **1 (El clásico)** remata más; el **2 (El preciso)** evalúa mejor pero se conforma con tablas. El **3 (El rematador)** está en el medio: busca más la jugada ganadora, pero en general es menos fino.
 - Click en tu pieza y luego en la casilla, o arrástrala. Los puntos marcan a dónde puede ir; el círculo, una pieza que se puede comer. Al coronar, el peón se vuelve dama.
 - Él responde solo. Si nadie gana en 60 jugadas cada uno, son tablas. Rendirse cuenta como perder.
 - Ganarle da el logro **Garry Kasparov**.
